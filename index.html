@@ -183,13 +183,13 @@
                     </div>
                 </div>
 
-                <!-- 実行・保存ボタン: 比率3:1、保存をオレンジに -->
-                <div class="bg-black border-b border-white/10 px-4 py-2 flex gap-3 justify-center shrink-0 z-40 relative">
-                    <button type="button" id="executeBtn" class="flex-[3] bg-system-indigo text-white font-black py-2.5 rounded-2xl shadow-lg btn-tap flex items-center justify-center gap-3 text-lg tracking-wider transition-colors active:bg-indigo-700">
+                <!-- 実行・保存ボタン: 背景をシルバー (#C7C7CC) に変更 -->
+                <div class="bg-[#C7C7CC] border-b border-black/10 px-4 py-2 flex gap-3 justify-center shrink-0 z-40 relative">
+                    <button type="button" id="executeBtn" class="flex-[3] bg-system-indigo text-white font-black py-1.5 rounded-2xl shadow-lg btn-tap flex items-center justify-center gap-3 text-lg tracking-wider transition-colors active:bg-indigo-700">
                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10"/></svg>
                         計算・再作図
                     </button>
-                    <button type="button" id="exportBtn" class="flex-[1] bg-system-orange text-white font-black py-2.5 rounded-2xl shadow-lg btn-tap flex items-center justify-center gap-2 text-lg transition-opacity active:opacity-70">
+                    <button type="button" id="exportBtn" class="flex-[1] bg-system-orange text-white font-black py-1.5 rounded-2xl shadow-lg btn-tap flex items-center justify-center gap-2 text-lg transition-opacity active:opacity-70">
                         保存
                     </button>
                 </div>
@@ -240,11 +240,11 @@
                         <div class="absolute left-1/2 top-0 bottom-0 w-px bg-white/5 -translate-x-1/2"></div>
                         <div class="pr-2">
                             <div class="text-sm text-[#8E8E93] font-bold mb-2">水平100mmにつき</div>
-                            <div class="text-base font-black text-white flex items-end gap-1"><span class="text-[#5E5CE6] text-2xl" id="edgeSlopeH">0.0</span><span class="text-sm text-white/40">mm</span></div>
+                            <div class="text-base font-black text-white flex items-end gap-1"><span class="text-system-indigo text-2xl" id="edgeSlopeH">0.0</span><span class="text-sm text-white/40">mm</span></div>
                         </div>
                         <div class="pl-2">
                             <div class="text-sm text-[#8E8E93] font-bold mb-2" id="edgeLengthDisplay">水平 0.00m で</div>
-                            <div class="text-base font-black text-white flex items-end gap-1"><span class="text-[#5E5CE6] text-2xl" id="edgeTotalDrop">0</span><span class="text-sm text-white/40">mm</span></div>
+                            <div class="text-base font-black text-white flex items-end gap-1"><span class="text-system-indigo text-2xl" id="edgeTotalDrop">0</span><span class="text-sm text-white/40">mm</span></div>
                         </div>
                     </div>
                 </div>
@@ -433,7 +433,7 @@
             if (points.length < 3 || !isClosed) return;
             let logical = new Array(points.length); logical[0] = {x: 0, y: 0}; let curAngle = 0;
             for (let i = 0; i < points.length - 1; i++) {
-                let len = manualLengths[i] !== undefined ? manualLengths[i] : (Math.hypot(points[i+1].x-points[i].x, points[i+1].y-points[i].y) / ppx);
+                let len = manualLengths[i] !== undefined ? manualLengths[i] : (Math.hypot(points[i+1].x - points[i].x, points[i+1].y - points[i].y) / ppx);
                 if (len < 0.01) len = 0.01;
                 logical[i+1] = { x: logical[i].x + len * Math.cos(curAngle), y: logical[i].y + len * Math.sin(curAngle) };
                 if (i < points.length - 2) {
@@ -446,7 +446,6 @@
             let area = 0; for (let i = 0; i < points.length; i++) { const p1 = points[i], p2 = points[(i + 1) % points.length]; area += p1.x * p2.y - p2.x * p1.y; }
             areaEl.innerText = Math.abs(area / (2 * ppx * ppx)).toFixed(2);
             
-            // ★パディングを40に縮小して図形を大きく表示
             if (shouldFit) {
                 let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
                 points.forEach(p => { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); });
