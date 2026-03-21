@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>面積計算アプリ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 全体のスクロールを禁止し、1画面に収める */
+        body { 
+            background-color: #f1f5f9; 
+            margin: 0;
+            height: 100vh; 
+            font-size: 16px; 
+            -webkit-tap-highlight-color: transparent;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+        }
+        
+        canvas { 
+            touch-action: none; 
+            display: block; 
+            width: 100%; 
+            height: 100%; 
+            cursor: crosshair;
+        }
+        
+        .modal { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(15, 23, 42, 0.85); 
+            align-items: flex-start; 
+            justify-content: center; 
+            z-index: 200; 
+            backdrop-filter: blur(8px); 
+            padding-top: 10vh; 
+        }
+        .modal.active { display: flex; }
+        
+        /* iPhoneのノッチ・ステータスバー対策 */
+        header { padding-top: calc(env(safe-area-inset-top) + 20px); }
+        
+        .btn-tap { transition: transform 0.1s; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 800; }
+        .btn-tap:active { transform: scale(0.94); }
+        
+        .control-btn { height: 36px; padding: 0 12px; border-radius: 10px; font-size: 16px !important; border: 1px solid transparent; transition: all 0.2s; white-space: nowrap; }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        
+        /* 入力数字を巨大化 */
+        #numericInput { 
+            font-size: 3rem !important; 
+            font-family: ui-monospace, monospace !important;
+            height: 64px !important;
+            line-height: 1.2 !important;
+            width: 100%;
+            padding: 0 10px;
+        }
+        
+        #pressProgress { position: fixed; top: 0; left: 0; height: 6px; background: #6366f1; z-index: 300; width: 0; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+        
+        /* フレックスレイアウト構造 */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .canvas-area { 
+            flex: 1; 
+            position: relative; 
+            background: #fff;
+            overflow: hidden;
+        }
+        
+        /* iOSズーム防止（16px以上を保証） */
+        button, input, select, textarea { font-size: 16px !important; }
+    </style>
+</head>
+<body class="font-sans text-slate-900">
+
+    <div id="pressProgress"></div>
+    <div id="toast" class="fixed top-40 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-4 rounded-full text-base font-bold opacity-0 pointer-events-none transition-opacity duration-300 z-[60] shadow-lg whitespace-nowrap"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="bg-white/95 backdrop-blur border-b px-2 py-3 flex flex-col shrink-0 shadow-sm z-50">
+            <div class="flex justify-center w-full mb-3">
+                <div class="bg-slate-900 text-white px-10 py-2.5 rounded-2xl flex items-baseline gap-3 border border-slate-700 shadow-md">
+                    <span class="text-base font-black opacity-70">面積</span>
+                    <span id="areaDisplay" class="text-4xl font-black tabular-nums tracking-tighter text-indigo-400">--.--</span>
+                    <span class="text-base font-bold text-indigo-400/70">m²</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-between px-2 gap-3">
+                <div class="flex gap-2">
+                    <button type="button" id="undoBtn" class="h-9 px-4 bg-slate-100 text-slate-700 rounded-lg btn-tap text-base flex items-center gap-1 font-bold">
+                        戻る
+                    </button>
+                    <button type="button" id="fitBtn" class="h-9 px-4 bg-indigo-50 text-indigo-700 rounded-lg btn-tap text-base font-bold hidden">
+                        全体
+                    </button>
+                </div>
+                <div class="flex gap-2">
+                    <button type="button" id="clearNumsBtn" class="btn-tap control-btn bg-amber-50 text-amber-700 font-bold border-amber-100">数値クリア</button>
+                    <button type="button" id="resetBtn" class="btn-tap control-btn bg-red-50 text-red-600 font-black border-red-100">リセット</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 勾配バー -->
+        <div class="bg-indigo-50 border-b px-4 py-2 flex items-center gap-4 shrink-0 shadow-inner">
+            <div class="flex items-center shrink-0">
+                <svg width="50" height="30" viewBox="0 0 60 40" class="text-indigo-700">
+                    <path d="M10 25 L50 25 L50 5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M10 25 L50 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2" opacity="0.3"/>
+                    <text x="30" y="38" font-size="14" text-anchor="middle" font-weight="900" fill="currentColor">100</text>
+                </svg>
+            </div>
+            <div class="flex-1 flex items-center">
+                <input type="number" id="slopeInput" placeholder="勾配(mm)" 
+                    class="w-full h-10 bg-white border-2 border-indigo-100 rounded-xl text-base px-4 font-bold text-indigo-600 focus:outline-none focus:border-indigo-400 tabular-nums shadow-sm"
+                    onclick="this.select()">
+            </div>
+            <div class="flex items-center justify-center min-w-[70px] bg-white h-10 rounded-xl border border-indigo-100 shadow-sm px-2">
+                <span id="slopeResult" class="text-base font-black text-indigo-900 tabular-nums">0.0°</span>
+            </div>
+        </div>
+
+        <!-- 実行ボタン -->
+        <div class="bg-slate-100 border-b px-4 py-2 flex justify-center shrink-0 z-40 relative">
+            <button type="button" id="executeBtn" class="w-full bg-indigo-600 text-white font-black py-2.5 rounded-2xl shadow-lg btn-tap flex items-center justify-center gap-3 text-lg tracking-wider transition-colors active:bg-indigo-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10"/></svg>
+                計算・再作図を実行
+            </button>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="canvas-area">
+            <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(#6366f1 1.5px, transparent 1.5px); background-size: 32px 32px;"></div>
+            <canvas id="canvas" class="relative z-10 w-full h-full"></canvas>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="inputModal" class="modal px-4 pb-12">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-sm shadow-2xl border border-slate-100 flex flex-col max-h-[85vh] overflow-hidden">
+            <div class="p-8 overflow-y-auto flex flex-col gap-6">
+                <h2 id="modalTitle" class="text-2xl font-black text-slate-800 text-center text-indigo-900">設定</h2>
+                
+                <div id="inputGroup">
+                    <p class="text-slate-500 text-base text-center font-bold mb-2">数値を入力してください</p>
+                    <div class="relative">
+                        <input type="number" id="numericInput" inputmode="decimal" placeholder="0.00" 
+                            class="bg-slate-50 border-2 border-slate-200 rounded-2xl text-center focus:border-indigo-600 focus:bg-white outline-none transition-all text-indigo-600 font-bold tabular-nums">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 font-black text-xl uppercase pointer-events-none">m</span>
+                    </div>
+                </div>
+
+                <div id="quickAngle" class="hidden grid grid-cols-3 gap-3">
+                    <button type="button" id="setQuick90" class="py-4 bg-indigo-50 text-indigo-700 rounded-2xl font-black text-base btn-tap">90°</button>
+                    <button type="button" id="setQuick270" class="py-4 bg-indigo-50 text-indigo-700 rounded-2xl font-black text-base btn-tap">270°</button>
+                    <button type="button" id="setQuick45" class="py-4 bg-indigo-50 text-indigo-700 rounded-2xl font-black text-base btn-tap">45°</button>
+                </div>
+
+                <div class="flex gap-4 shrink-0">
+                    <button type="button" id="cancelModal" class="flex-1 h-14 bg-slate-100 text-slate-600 rounded-2xl font-bold text-base btn-tap">キャンセル</button>
+                    <button type="button" id="saveBtn" class="flex-1 h-14 bg-indigo-600 text-white rounded-2xl font-black text-base shadow-lg btn-tap">適用</button>
+                </div>
+
+                <button type="button" id="makeAutoBtn" class="hidden w-full py-4 bg-indigo-50 text-indigo-700 rounded-2xl font-black text-base btn-tap border-2 border-indigo-100 shadow-sm mt-1">✨ この辺を自動計算にして</button>
+
+                <div id="edgeInfo" class="hidden bg-slate-50 border border-slate-200 p-6 rounded-3xl mt-2">
+                    <div class="flex justify-between items-center mb-5 border-b border-slate-200 pb-3">
+                        <div class="text-base text-indigo-500 font-black">勾配と高低差</div>
+                        <div class="text-base font-bold text-slate-600 bg-white px-3 py-1 rounded-lg border" id="edgeAngle">0.0°</div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 relative">
+                        <div class="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 -translate-x-1/2"></div>
+                        <div class="pr-2">
+                            <div class="text-sm text-slate-500 font-bold mb-2">水平100mmにつき</div>
+                            <div class="text-base font-black text-slate-700 flex items-end gap-1">
+                                <span class="text-indigo-600 text-2xl" id="edgeSlopeH">0.0</span><span class="text-sm text-slate-400">mm</span>
+                            </div>
+                        </div>
+                        <div class="pl-2">
+                            <div class="text-sm text-slate-500 font-bold mb-2" id="edgeLengthDisplay">水平 0.00m で</div>
+                            <div class="text-base font-black text-slate-700 flex items-end gap-1">
+                                <span class="text-indigo-600 text-2xl" id="edgeTotalDrop">0</span><span class="text-sm text-slate-400">mm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            if (!toast) return;
+            toast.innerText = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+        }
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const areaEl = document.getElementById('areaDisplay');
+        const inputModal = document.getElementById('inputModal');
+        const numericInput = document.getElementById('numericInput');
+        const slopeInput = document.getElementById('slopeInput');
+        const slopeResult = document.getElementById('slopeResult');
+        const pressProgress = document.getElementById('pressProgress');
+        
+        let points = [];        
+        let manualLengths = {}; 
+        let fixedAngles = {};   
+        let isClosed = false;
+        let selectedIdx = -1;
+        let activeMode = 'edge'; 
+        let ppx = 60; 
+        let draggingIdx = null;
+        let targetEdgeIdx = null; 
+        let longPressTriggered = false;
+        let modalCooldown = false;
+        let actionHistory = [];
+
+        function saveState() {
+            const state = {
+                points: JSON.parse(JSON.stringify(points)),
+                manualLengths: {...manualLengths},
+                fixedAngles: {...fixedAngles},
+                isClosed,
+                ppx,
+                globalBaseAngle,
+                globalIsCW
+            };
+            actionHistory.push(state);
+            if (actionHistory.length > 50) actionHistory.shift();
+        }
+
+        function undo() {
+            if (actionHistory.length === 0) return;
+            const state = actionHistory.pop();
+            points = state.points;
+            manualLengths = state.manualLengths;
+            fixedAngles = state.fixedAngles;
+            isClosed = state.isClosed;
+            ppx = state.ppx;
+            globalBaseAngle = state.globalBaseAngle;
+            globalIsCW = state.globalIsCW;
+            rebuildGeometry(false);
+            draw();
+        }
+
+        let cameraX = 0, cameraY = 0, zoom = 1.0;
+        let isPanning = false;
+        let lastRawPos = {x: 0, y: 0};
+        let startRawPos = {x: 0, y: 0};
+        let initialPinchDist = null;
+        let initialZoom = 1;
+        let initialPinchCenter = null;
+        let hasMoved = false; 
+
+        let pressTimer = null;
+        const LONG_PRESS_DURATION = 500;
+        let globalBaseAngle = 0; 
+        let globalIsCW = true;
+
+        numericInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('saveBtn').click(); } });
+        slopeInput.addEventListener('input', () => {
+            const h = parseFloat(slopeInput.value);
+            if (!isNaN(h)) {
+                const deg = Math.atan(h / 100) * 180 / Math.PI;
+                slopeResult.innerText = deg.toFixed(1) + '°';
+            } else { slopeResult.innerText = '0.0°'; }
+        });
+
+        function resize() {
+            if (!canvas.parentElement) return;
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            draw();
+        }
+        window.addEventListener('resize', resize);
+        resize();
+        setTimeout(resize, 100);
+
+        function getRawCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const t = (e.touches && e.touches.length > 0) ? e.touches[0] : e;
+            return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+        }
+        function w2s(w) { return { x: w.x * zoom + cameraX, y: w.y * zoom + cameraY }; }
+        function s2w(s) { return { x: (s.x - cameraX) / zoom, y: (s.y - cameraY) / zoom }; }
+        function distToSegment(p, v, w) {
+            const l2 = Math.pow(v.x - w.x, 2) + Math.pow(v.y - w.y, 2); if (l2 == 0) return Math.hypot(p.x - v.x, p.y - v.y);
+            let t = Math.max(0, Math.min(1, ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2));
+            return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+        }
+
+        document.getElementById('executeBtn').onclick = () => {
+            if (!isClosed) { showToast("図形を閉じてから実行してください"); return; }
+            saveState();
+            const N = points.length;
+            let targetAutoIdx = -1;
+            for (let i = N - 1; i >= 0; i--) { if (fixedAngles[i] === undefined) { targetAutoIdx = i; break; } }
+            if (targetAutoIdx === -1) targetAutoIdx = N - 1;
+            const shiftAmount = (N - 1 - targetAutoIdx + N) % N;
+            if (shiftAmount !== 0) {
+                let newPts = [], newMan = {}, newFix = {};
+                for (let i = 0; i < N; i++) {
+                    const oldIdx = (i - shiftAmount + N) % N;
+                    newPts[i] = points[oldIdx];
+                    if (manualLengths[oldIdx] !== undefined) newMan[i] = manualLengths[oldIdx];
+                    if (fixedAngles[oldIdx] !== undefined) newFix[i] = fixedAngles[oldIdx];
+                }
+                points = newPts; manualLengths = newMan; fixedAngles = newFix;
+            }
+            delete manualLengths[N - 1]; delete fixedAngles[0]; delete fixedAngles[N - 1];
+            let hasMan = false;
+            for(let i = 0; i < N; i++) { if(manualLengths[i] !== undefined) { const d = Math.hypot(points[(i+1)%N].x - points[i].x, points[(i+1)%N].y - points[i].y); ppx = d / manualLengths[i]; hasMan = true; break; } }
+            if(!hasMan) { const d = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y); ppx = d / 10; }
+            for (let i = 0; i < N - 1; i++) { if (manualLengths[i] === undefined) { const d = Math.hypot(points[(i+1)%N].x - points[i].x, points[(i+1)%N].y - points[i].y); manualLengths[i] = Math.round((d / ppx) * 100) / 100; } }
+            let rawA = Math.atan2(points[1].y - points[0].y, points[1].x - points[0].x);
+            globalBaseAngle = Math.round(rawA / (Math.PI / 2)) * (Math.PI / 2);
+            let s = 0; for(let i = 0; i < N; i++) s += points[i].x * points[(i+1)%N].y - points[(i+1)%N].x * points[i].y;
+            globalIsCW = s > 0;
+            for (let i = 1; i < N - 1; i++) {
+                if (fixedAngles[i] === undefined) {
+                    const prev = points[(i-1+N)%N], curr = points[i], next = points[(i+1)%N];
+                    const aIn = Math.atan2(curr.y-prev.y, curr.x-prev.x), aOut = Math.atan2(next.y-curr.y, next.x-curr.x);
+                    let t = aOut - aIn; while(t < -Math.PI) t += Math.PI*2; while(t > Math.PI) t -= Math.PI*2;
+                    fixedAngles[i] = ((globalIsCW && t < 0) || (!globalIsCW && t > 0)) ? 270 : 90;
+                }
+            }
+            rebuildGeometry(true); draw(); showToast("計算・再作図しました");
+        };
+
+        function rebuildGeometry(shouldFit = false) {
+            if (points.length < 3 || !isClosed) return;
+            let logical = new Array(points.length); logical[0] = {x: 0, y: 0}; let curAngle = 0;
+            for (let i = 0; i < points.length - 1; i++) {
+                let len = manualLengths[i] !== undefined ? manualLengths[i] : (Math.hypot(points[i+1].x-points[i].x, points[i+1].y-points[i].y) / ppx);
+                if (len < 0.01) len = 0.01;
+                logical[i+1] = { x: logical[i].x + len * Math.cos(curAngle), y: logical[i].y + len * Math.sin(curAngle) };
+                if (i < points.length - 2) {
+                    if (fixedAngles[i+1] !== undefined) { curAngle += (globalIsCW ? (180 - fixedAngles[i+1]) * Math.PI / 180 : -(180 - fixedAngles[i+1]) * Math.PI / 180); } 
+                    else { const a1 = Math.atan2(points[i+1].y-points[i].y, points[i+1].x-points[i].x), a2 = Math.atan2(points[i+2].y-points[i+1].y, points[i+2].x-points[i+1].x); let t = a2-a1; while(t < -Math.PI) t += Math.PI*2; while(t > Math.PI) t -= Math.PI*2; curAngle += t; }
+                }
+            }
+            const currentB = Math.atan2(logical[1].y - logical[0].y, logical[1].x - logical[0].x), rot = globalBaseAngle - currentB;
+            for (let i = 0; i < logical.length; i++) { const p = logical[i]; points[i] = { x: (p.x * Math.cos(rot) - p.y * Math.sin(rot)) * ppx, y: (p.x * Math.sin(rot) + p.y * Math.cos(rot)) * ppx }; }
+            let area = 0; for (let i = 0; i < points.length; i++) { const p1 = points[i], p2 = points[(i + 1) % points.length]; area += p1.x * p2.y - p2.x * p1.y; }
+            areaEl.innerText = Math.abs(area / (2 * ppx * ppx)).toFixed(2);
+            if (shouldFit) {
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                points.forEach(p => { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); });
+                const pad = 60; zoom = Math.min((canvas.width - pad*2) / (maxX-minX||1), (canvas.height - pad*2) / (maxY-minY||1));
+                cameraX = canvas.width/2 - ((minX+maxX)/2)*zoom; cameraY = canvas.height/2 - ((minY+maxY)/2)*zoom;
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (points.length === 0) return;
+            if (isClosed) {
+                ctx.beginPath(); ctx.moveTo(w2s(points[0]).x, w2s(points[0]).y);
+                for (let i = 1; i < points.length; i++) ctx.lineTo(w2s(points[i]).x, w2s(points[i]).y);
+                ctx.closePath(); ctx.fillStyle = 'rgba(99, 102, 241, 0.08)'; ctx.fill();
+            }
+            const limit = isClosed ? points.length : points.length - 1;
+            for (let i = 0; i < limit; i++) {
+                const p1 = w2s(points[i]), p2 = w2s(points[(i + 1) % points.length]), isAuto = isClosed && i === points.length - 1;
+                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineWidth = 6; ctx.lineCap = 'round';
+                if (isAuto) { ctx.setLineDash([8, 8]); ctx.strokeStyle = '#3b82f6'; } else { ctx.setLineDash([]); ctx.strokeStyle = manualLengths[i] !== undefined ? '#1e293b' : '#cbd5e1'; }
+                ctx.stroke();
+            }
+            ctx.setLineDash([]); 
+            points.forEach((p_world, i) => { if (isClosed) drawAngleInfo(p_world, i); });
+            points.forEach((p_world, i) => { const p = w2s(p_world); ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI * 2); ctx.fillStyle = (i === 0) ? '#000' : 'white'; ctx.fill(); ctx.strokeStyle = '#6366f1'; ctx.lineWidth = 3; ctx.stroke(); });
+            for (let i = 0; i < limit; i++) {
+                const p1 = w2s(points[i]), p2 = w2s(points[(i + 1) % points.length]), isAuto = isClosed && i === points.length - 1, midX = (p1.x + p2.x) / 2, midY = (p1.y + p2.y) / 2;
+                const d = Math.hypot(points[(i+1)%points.length].x - points[i].x, points[(i+1)%points.length].y - points[i].y), val = manualLengths[i] !== undefined ? manualLengths[i] : (d / ppx), label = isAuto ? `Auto ${val.toFixed(2)}m` : `${val.toFixed(2)}m`;
+                ctx.font = 'bold 16px ui-monospace, monospace'; const tw = ctx.measureText(label).width;
+                ctx.fillStyle = isAuto ? 'rgba(239, 246, 255, 0.95)' : (manualLengths[i] !== undefined ? '#1e293b' : 'rgba(100, 116, 139, 0.95)');
+                ctx.beginPath(); ctx.roundRect(midX - tw/2 - 10, midY - 14, tw + 20, 28, 6); ctx.fill();
+                ctx.fillStyle = isAuto ? '#3b82f6' : 'white'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, midX, midY);
+            }
+            if (!isClosed) fitBtn.classList.add('hidden'); else fitBtn.classList.remove('hidden');
+        }
+
+        function drawAngleInfo(p_world, i) {
+            const prev = w2s(points[(i-1+points.length)%points.length]), curr = w2s(points[i]), next = w2s(points[(i+1)%points.length]);
+            const aIn = Math.atan2(curr.y - prev.y, curr.x - prev.x), aOut = Math.atan2(next.y - curr.y, next.x - curr.x);
+            let turn = aOut - aIn; while(turn < -Math.PI) turn += Math.PI*2; while(turn > Math.PI) turn -= Math.PI*2;
+            let actualDeg = globalIsCW ? (180 - turn * 180 / Math.PI) : (180 + turn * 180 / Math.PI); while(actualDeg <= 0) actualDeg += 360; while(actualDeg > 360) actualDeg -= 360;
+            const isFixed = fixedAngles[i] !== undefined, displayDeg = isFixed ? fixedAngles[i] : (Math.round(actualDeg * 10) / 10), label = `${displayDeg}°`;
+            ctx.font = 'bold 14px sans-serif'; const tw = ctx.measureText(label).width;
+            const a1 = Math.atan2(prev.y - curr.y, prev.x - curr.x), a2 = Math.atan2(next.y - curr.y, next.x - curr.x);
+            let diff = a2 - a1; while(diff <= -Math.PI) diff += Math.PI * 2; while(diff > Math.PI) diff -= Math.PI * 2;
+            let bisectorAngle = a1 + diff / 2; if (globalIsCW) { if (diff > 0) bisectorAngle += Math.PI; } else { if (diff < 0) bisectorAngle += Math.PI; }
+            if (displayDeg > 180) bisectorAngle += Math.PI;
+            const dist = 50, tx = curr.x + Math.cos(bisectorAngle) * dist, ty = curr.y + Math.sin(bisectorAngle) * dist;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'; ctx.beginPath(); ctx.roundRect(tx - tw/2 - 6, ty - 12, tw + 12, 24, 6); ctx.fill();
+            ctx.fillStyle = isFixed ? '#f43f5e' : '#94a3b8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, tx, ty);
+            if (displayDeg === 90 || displayDeg === 270) {
+                const a1_ang = Math.atan2(prev.y - curr.y, prev.x - curr.x), a2_ang = Math.atan2(next.y - curr.y, next.x - curr.x);
+                ctx.save(); ctx.translate(curr.x, curr.y); ctx.beginPath(); ctx.moveTo(Math.cos(a1_ang)*16, Math.sin(a1_ang)*16); ctx.lineTo(Math.cos(a1_ang)*16+Math.cos(a2_ang)*16, Math.sin(a1_ang)*16+Math.sin(a2_ang)*16); ctx.lineTo(Math.cos(a2_ang)*16, Math.sin(a2_ang)*16);
+                ctx.strokeStyle = isFixed ? '#f43f5e' : '#94a3b8'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.restore();
+            }
+        }
+
+        function handleStart(e) {
+            if (modalCooldown) return;
+            const raw = getRawCoords(e); lastRawPos = raw; startRawPos = {x: raw.x, y: raw.y}; const pos = s2w(raw); hasMoved = false; longPressTriggered = false;
+            if (e.target.id === 'canvas' && e.cancelable) e.preventDefault();
+            if (!isClosed) { saveState(); if (points.length >= 3 && Math.hypot(raw.x - w2s(points[0]).x, raw.y - w2s(points[0]).y) < 50) { finalizeDrawing(); return; } points.push(pos); draw(); return; }
+            const vIdx = points.findIndex(p => Math.hypot(raw.x - w2s(p).x, raw.y - w2s(p).y) < 40);
+            if (vIdx !== -1) { draggingIdx = vIdx; selectedIdx = vIdx; pressProgress.style.opacity = '1'; let start = Date.now(); pressTimer = setInterval(() => { let elapsed = Date.now() - start; let progress = Math.min(100, (elapsed / LONG_PRESS_DURATION) * 100); pressProgress.style.width = progress + '%'; if (elapsed >= LONG_PRESS_DURATION) { clearInterval(pressTimer); pressTimer = null; longPressTriggered = true; } }, 20); draw(); return; }
+            for (let i = 0; i < points.length; i++) { if (distToSegment(raw, w2s(points[i]), w2s(points[(i+1)%points.length])) < 40) { targetEdgeIdx = i; return; } }
+            isPanning = true;
+        }
+
+        function handleMove(e) {
+            const raw = getRawCoords(e); if (e.target.id === 'canvas' && e.cancelable) e.preventDefault();
+            if (!isClosed) { draw(); return; }
+            if (Math.hypot(raw.x - startRawPos.x, raw.y - startRawPos.y) > 20) { hasMoved = true; if (pressTimer) { clearInterval(pressTimer); pressTimer = null; pressProgress.style.opacity = '0'; } }
+            if (isPanning) { if (hasMoved) { cameraX += raw.x - lastRawPos.x; cameraY += raw.y - lastRawPos.y; lastRawPos = raw; draw(); } return; }
+            if (draggingIdx === null) return;
+            if (hasMoved) { points[draggingIdx] = s2w(raw); rebuildGeometry(false); lastRawPos = raw; draw(); }
+        }
+
+        function handleEnd() {
+            if (pressTimer) { clearInterval(pressTimer); pressTimer = null; }
+            pressProgress.style.opacity = '0'; setTimeout(() => { if (!pressTimer) pressProgress.style.width = '0'; }, 200);
+            if (isClosed && !hasMoved && !modalCooldown) { if (longPressTriggered && draggingIdx !== null) { activeMode = 'angle'; selectedIdx = draggingIdx; openModal(); } else if (targetEdgeIdx !== null) { activeMode = 'edge'; selectedIdx = targetEdgeIdx; openModal(); } }
+            draggingIdx = null; targetEdgeIdx = null; isPanning = false; draw();
+        }
+
+        function finalizeDrawing() { saveState(); isClosed = true; rebuildGeometry(false); draw(); showToast("辺をタップで寸法、角を長押しで角度入力"); }
+
+        function openModal() {
+            document.getElementById('quickAngle').classList.toggle('hidden', activeMode === 'edge');
+            document.getElementById('modalTitle').innerText = activeMode === 'edge' ? "寸法の入力" : "角度の入力";
+            const getA = (idx) => { const prev = w2s(points[(idx-1+points.length)%points.length]), curr = w2s(points[idx]), next = w2s(points[(idx+1)%points.length]); const aIn = Math.atan2(curr.y-prev.y, curr.x-prev.x), aOut = Math.atan2(next.y-curr.y, next.x-curr.x); let turn = aOut-aIn; while(turn < -Math.PI) turn += Math.PI*2; while(turn > Math.PI) turn -= Math.PI*2; let actualD = globalIsCW ? (180-turn*180/Math.PI) : (180+turn*180/Math.PI); while(actualD <= 0) actualD += 360; while(actualD > 360) actualD -= 360; return Math.round(actualD*10)/10; };
+            let val = activeMode === 'edge' ? manualLengths[selectedIdx] : fixedAngles[selectedIdx];
+            if (!val && activeMode === 'edge') val = (Math.hypot(points[(selectedIdx+1)%points.length].x-points[selectedIdx].x, points[(selectedIdx+1)%points.length].y-points[selectedIdx].y)/ppx).toFixed(2);
+            else if (!val && isClosed && activeMode === 'angle') val = getA(selectedIdx);
+            const edgeInfo = document.getElementById('edgeInfo'), makeAutoBtn = document.getElementById('makeAutoBtn');
+            if (activeMode === 'edge' && isClosed) {
+                edgeInfo.classList.remove('hidden'); makeAutoBtn.classList.toggle('hidden', selectedIdx === points.length - 1);
+                const p1 = points[selectedIdx], p2 = points[(selectedIdx+1)%points.length], dx = p2.x-p1.x, dy = p2.y-p1.y, cos = Math.cos(-globalBaseAngle), sin = Math.sin(-globalBaseAngle), ldx = dx*cos-dy*sin, ldy = dx*sin+dy*cos;
+                let relDeg = Math.abs(Math.atan2(ldy, ldx)*180/Math.PI)%180; if (relDeg > 90) relDeg = 180-relDeg;
+                document.getElementById('edgeAngle').innerText = relDeg.toFixed(1) + '°';
+                const currentL = val ? parseFloat(val) : 0, lenH = currentL*Math.cos(relDeg*Math.PI/180), lenV = currentL*Math.sin(relDeg*Math.PI/180);
+                if (relDeg > 89.5) { document.getElementById('edgeSlopeH').innerText = "0.0"; document.getElementById('edgeTotalDrop').innerText = "0"; } 
+                else if (relDeg < 0.5) { document.getElementById('edgeSlopeH').innerText = "0.0"; document.getElementById('edgeTotalDrop').innerText = "0"; } 
+                else { if (relDeg <= 45) { const h = 100*Math.tan(relDeg*Math.PI/180); document.getElementById('edgeSlopeH').innerText = h.toFixed(1); document.getElementById('edgeTotalDrop').innerText = Math.round(lenV*1000); } else { const w = 100/Math.tan(relDeg*Math.PI/180); document.getElementById('edgeSlopeH').innerText = w.toFixed(1); document.getElementById('edgeTotalDrop').innerText = Math.round(lenH*1000); } }
+            } else { edgeInfo.classList.add('hidden'); makeAutoBtn.classList.add('hidden'); }
+            numericInput.value = val || ''; inputModal.classList.add('active'); numericInput.focus(); numericInput.select();
+        }
+
+        document.getElementById('saveBtn').onclick = (e) => { e.stopPropagation(); saveState(); const val = parseFloat(numericInput.value); if (activeMode === 'edge') { if (!isNaN(val) && val > 0) manualLengths[selectedIdx] = val; else delete manualLengths[selectedIdx]; } else { if (!isNaN(val) && val >= 0) fixedAngles[selectedIdx] = val; else delete fixedAngles[selectedIdx]; } inputModal.classList.remove('active'); modalCooldown = true; setTimeout(() => { modalCooldown = false; }, 350); draw(); };
+        document.getElementById('cancelModal').onclick = (e) => { e.stopPropagation(); inputModal.classList.remove('active'); modalCooldown = true; setTimeout(() => { modalCooldown = false; }, 350); draw(); };
+        document.getElementById('undoBtn').onclick = () => { undo(); };
+        document.getElementById('clearNumsBtn').onclick = function() { saveState(); manualLengths = {}; fixedAngles = {}; draw(); };
+        document.getElementById('resetBtn').onclick = function() { saveState(); points = []; manualLengths = {}; fixedAngles = {}; isClosed = false; cameraX=0; cameraY=0; zoom=1; draw(); };
+        document.getElementById('setQuick90').onclick = () => { numericInput.value = 90; document.getElementById('saveBtn').click(); };
+        document.getElementById('setQuick270').onclick = () => { numericInput.value = 270; document.getElementById('saveBtn').click(); };
+        document.getElementById('setQuick45').onclick = () => { numericInput.value = 45; document.getElementById('saveBtn').click(); };
+
+        let isTouching = false;
+        canvas.addEventListener('mousedown', (e) => { if (isTouching) return; handleStart(e); });
+        window.addEventListener('mousemove', (e) => { if (isTouching) return; handleMove(e); });
+        window.addEventListener('mouseup', (e) => { if (isTouching) return; handleEnd(); });
+        canvas.addEventListener('touchstart', (e) => { isTouching = true; if (e.touches.length === 2) { isPanning = false; draggingIdx = null; initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); initialZoom = zoom; const r = canvas.getBoundingClientRect(); initialPinchCenter = { x: (e.touches[0].clientX+e.touches[1].clientX)/2 - r.left, y: (e.touches[0].clientY+e.touches[1].clientY)/2 - r.top }; if (e.cancelable) e.preventDefault(); return; } handleStart(e); }, {passive:false});
+        window.addEventListener('touchmove', (e) => { if (isTouching && e.touches.length === 2 && initialPinchDist) { const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY), nz = Math.max(0.1, Math.min(10, initialZoom * (d / initialPinchDist))), r = nz / zoom; cameraX = initialPinchCenter.x - (initialPinchCenter.x - cameraX) * r; cameraY = initialPinchCenter.y - (initialPinchCenter.y - cameraY) * r; zoom = nz; draw(); if (e.cancelable) e.preventDefault(); return; } handleMove(e); }, {passive:false});
+        window.addEventListener('touchend', (e) => { handleEnd(); setTimeout(() => { isTouching = false; }, 500); });
+    </script>
+</body>
+</html>
