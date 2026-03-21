@@ -59,7 +59,7 @@
             justify-content: center;
         }
 
-        input[type="number"] {
+        input[type="number"], input[type="text"] {
             -moz-appearance: textfield;
             appearance: textfield;
             background: #2C2C2E;
@@ -82,7 +82,7 @@
             border-radius: 16px;
         }
         
-        #pressProgress { position: fixed; top: 0; left: 0; height: 6px; background: #5E5CE6; z-index: 300; width: 0; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+        #pressProgress { position: fixed; top: 0; left: 0; height: 6px; background: #FF9500; z-index: 300; width: 0; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
         
         .app-container {
             display: flex;
@@ -97,8 +97,33 @@
 
         .canvas-area { flex: 1; position: relative; background: #1C1C1E; overflow: hidden; }
         
-        #historyView { overflow-y: auto; background: #000; padding: 16px; }
+        /* ブランド透かし表示 */
+        .brand-watermark {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            font-size: 14px;
+            font-weight: 200;
+            color: #8E8E93;
+            letter-spacing: 0.15em;
+            pointer-events: none;
+            z-index: 20;
+            opacity: 0.6;
+        }
+
+        #historyView { overflow-y: auto; background: #000; padding: 16px; padding-bottom: 80px; }
         .history-card { background: #1C1C1E; border-radius: 20px; padding: 16px; margin-bottom: 16px; border: 1px solid #2C2C2E; }
+        .memo-input { 
+            width: 100%; 
+            background: #2C2C2E; 
+            border: 1px solid #3A3A3C; 
+            border-radius: 8px; 
+            padding: 8px 12px; 
+            margin-bottom: 10px; 
+            font-size: 14px; 
+            font-weight: bold;
+            color: #FF9500; 
+        }
 
         .tab-bar { 
             background: #1C1C1E; 
@@ -117,26 +142,20 @@
             color: #8E8E93; 
             transition: all 0.2s; 
             font-size: 14px !important; 
-            border: 2px solid transparent; /* ガタつき防止の透明ボーダー */
+            border: 2px solid transparent; 
         }
-
-        /* 選択中のタブ：ボーダーをオレンジに */
         .tab-item.active { 
             background: #3A3A3C; 
             color: #FFFFFF; 
             border: 2px solid #FF9500; 
         }
         
-        button, input, select, textarea { font-size: 16px !important; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* システムアクセントカラー */
         .bg-system-indigo { background-color: #5E5CE6; }
         .bg-system-gray { background-color: #2C2C2E; color: #FFFFFF; }
         .bg-system-red { background-color: #FF453A; color: #FFFFFF; }
         .bg-system-orange { background-color: #FF9500; color: #FFFFFF; }
-        .text-system-indigo { color: #5E5CE6; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="font-sans">
@@ -156,16 +175,17 @@
             <div id="drawView" class="tab-view active">
                 <header class="border-b border-white/10 px-2 py-3 flex flex-col shrink-0">
                     <div class="flex justify-center w-full mb-3">
-                        <div class="bg-white text-black px-10 py-2.5 rounded-2xl flex items-baseline gap-3 shadow-md">
-                            <span class="text-base font-black opacity-60">面積</span>
-                            <span id="areaDisplay" class="text-4xl font-black tabular-nums tracking-tighter">--.--</span>
-                            <span class="text-base font-bold opacity-60">m²</span>
+                        <div id="areaBox" class="bg-system-indigo text-white px-10 py-2.5 rounded-2xl flex items-baseline gap-3 shadow-md">
+                            <span class="text-[14px] font-black opacity-60">面積</span>
+                            <span id="areaDisplay" class="text-3xl font-black tabular-nums tracking-tighter">--.--</span>
+                            <span class="text-[14px] font-bold opacity-60">m²</span>
                         </div>
                     </div>
+                    
                     <div class="flex items-center justify-between px-2 gap-3 overflow-x-auto scrollbar-hide">
                         <div class="flex gap-2">
                             <button type="button" id="undoBtn" class="header-btn bg-system-gray text-white btn-tap">戻る</button>
-                            <button type="button" id="fitBtn" class="header-btn bg-system-indigo text-white btn-tap">全体</button>
+                            <button type="button" id="fitBtn" class="header-btn bg-system-orange text-white btn-tap">全体</button>
                         </div>
                         <div class="flex gap-1.5">
                             <button type="button" id="clearNumsBtn" class="header-btn bg-system-gray text-white btn-tap">数値クリア</button>
@@ -183,7 +203,7 @@
                         </svg>
                     </div>
                     <div class="flex-1">
-                        <input type="number" id="slopeInput" placeholder="勾配(mm)" class="w-full h-10 rounded-xl text-base px-4 font-bold text-black bg-white border-none focus:ring-2 focus:ring-indigo-500 tabular-nums shadow-sm" onclick="this.select()">
+                        <input type="number" id="slopeInput" placeholder="勾配(mm)" class="w-full h-10 rounded-xl text-base px-4 font-bold text-black bg-white border-none focus:ring-2 focus:ring-black tabular-nums shadow-sm" onclick="this.select()">
                     </div>
                     <div class="flex items-center justify-center min-w-[70px] bg-white h-10 rounded-xl border border-black/5 shadow-sm px-2">
                         <span id="slopeResult" class="text-base font-black text-black tabular-nums">0.0°</span>
@@ -202,6 +222,7 @@
 
                 <div class="canvas-area">
                     <div class="absolute inset-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(#FFFFFF 1px, transparent 1px); background-size: 32px 32px;"></div>
+                    <div class="brand-watermark">KYOWAROOF</div>
                     <canvas id="canvas" class="relative z-10 w-full h-full"></canvas>
                 </div>
             </div>
@@ -236,7 +257,6 @@
                     <button type="button" id="cancelModal" class="flex-1 h-14 bg-[#2C2C2E] text-white rounded-2xl font-bold text-base btn-tap">キャンセル</button>
                     <button type="button" id="saveBtn" class="flex-1 h-14 bg-system-indigo text-white rounded-2xl font-black text-base btn-tap">適用</button>
                 </div>
-                <button type="button" id="makeAutoBtn" class="hidden w-full py-4 bg-[#2C2C2E] text-system-indigo rounded-2xl font-black text-base btn-tap mt-1">✨ この辺を自動計算にする</button>
                 <div id="edgeInfo" class="hidden bg-[#2C2C2E] border border-white/5 p-6 rounded-3xl mt-2">
                     <div class="flex justify-between items-center mb-5 border-b border-white/5 pb-3">
                         <div class="text-base text-system-indigo font-black">勾配と高低差</div>
@@ -246,11 +266,11 @@
                         <div class="absolute left-1/2 top-0 bottom-0 w-px bg-white/5 -translate-x-1/2"></div>
                         <div class="pr-2">
                             <div class="text-sm text-[#8E8E93] font-bold mb-2">水平100mmにつき</div>
-                            <div class="text-base font-black text-white flex items-end gap-1"><span class="text-system-indigo text-2xl" id="edgeSlopeH">0.0</span><span class="text-sm text-white/40">mm</span></div>
+                            <div class="text-base font-black text-white flex items-end gap-1"><span class="text-[#5E5CE6] text-2xl" id="edgeSlopeH">0.0</span><span class="text-sm text-white/40">mm</span></div>
                         </div>
                         <div class="pl-2">
                             <div class="text-sm text-[#8E8E93] font-bold mb-2" id="edgeLengthDisplay">水平 0.00m で</div>
-                            <div class="text-base font-black text-white flex items-end gap-1"><span class="text-system-indigo text-2xl" id="edgeTotalDrop">0</span><span class="text-sm text-white/40">mm</span></div>
+                            <div class="text-base font-black text-white flex items-end gap-1"><span class="text-[#5E5CE6] text-2xl" id="edgeTotalDrop">0</span><span class="text-sm text-white/40">mm</span></div>
                         </div>
                     </div>
                 </div>
@@ -259,66 +279,9 @@
     </div>
 
     <script>
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            if (!toast) return;
-            toast.innerText = msg; toast.style.opacity = '1';
-            setTimeout(() => { toast.style.opacity = '0'; }, 2000);
-        }
-
-        let savedData = []; 
-
-        function switchTab(tab) {
-            document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-            if (tab === 'draw') {
-                document.getElementById('drawView').classList.add('active');
-                document.getElementById('tabDraw').classList.add('active');
-                resize();
-            } else {
-                document.getElementById('historyView').classList.add('active');
-                document.getElementById('tabHistory').classList.add('active');
-                renderHistory();
-            }
-        }
-
-        function renderHistory() {
-            const list = document.getElementById('historyList');
-            if (savedData.length === 0) {
-                list.innerHTML = `<div class="text-center text-[#8E8E93] py-20 font-bold">まだ保存されたデータはありません</div>`;
-                return;
-            }
-            list.innerHTML = savedData.slice().reverse().map((data, idx) => `
-                <div class="history-card">
-                    <div class="flex justify-between items-center mb-3">
-                        <span class="text-[#8E8E93] text-xs font-bold">${data.time}</span>
-                        <span class="text-white font-black text-lg">${data.area} m²</span>
-                    </div>
-                    <img src="${data.img}" class="w-full rounded-xl border border-white/10 mb-3 bg-[#000]">
-                    <div class="flex gap-2">
-                        <button onclick="deleteHistory(${savedData.length - 1 - idx})" class="flex-1 py-3 bg-[#2C2C2E] text-[#FF453A] rounded-xl font-bold text-sm">削除</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function deleteHistory(idx) {
-            savedData.splice(idx, 1);
-            renderHistory();
-            showToast("削除しました");
-        }
-
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const areaEl = document.getElementById('areaDisplay');
-        const inputModal = document.getElementById('inputModal');
-        const numericInput = document.getElementById('numericInput');
-        const fitBtn = document.getElementById('fitBtn');
-        const slopeInput = document.getElementById('slopeInput');
-        const slopeResult = document.getElementById('slopeResult');
-        const pressProgress = document.getElementById('pressProgress');
-        const exportBtn = document.getElementById('exportBtn');
-        
+        // --- 基本変数 ---
+        const STORAGE_KEY = 'area_calc_data_v2';
+        let canvas, ctx, areaEl, inputModal, numericInput, fitBtn, slopeInput, slopeResult, pressProgress, exportBtn;
         let points = [];        
         let manualLengths = {}; 
         let fixedAngles = {};   
@@ -331,30 +294,6 @@
         let longPressTriggered = false;
         let modalCooldown = false;
         let actionHistory = [];
-
-        function saveState() {
-            const state = { points: JSON.parse(JSON.stringify(points)), manualLengths: {...manualLengths}, fixedAngles: {...fixedAngles}, isClosed, ppx, globalBaseAngle, globalIsCW };
-            actionHistory.push(state); if (actionHistory.length > 50) actionHistory.shift();
-        }
-
-        function undo() {
-            if (actionHistory.length === 0) return;
-            const state = actionHistory.pop();
-            points = state.points; manualLengths = state.manualLengths; fixedAngles = state.fixedAngles; isClosed = state.isClosed; ppx = state.ppx; globalBaseAngle = state.globalBaseAngle; globalIsCW = state.globalIsCW;
-            rebuildGeometry(false); draw();
-        }
-
-        exportBtn.onclick = () => {
-            if (points.length < 3 || !isClosed) { showToast("図形を閉じてから保存してください"); return; }
-            const dataUrl = canvas.toDataURL("image/png");
-            savedData.push({
-                img: dataUrl,
-                area: areaEl.innerText,
-                time: new Date().toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-            });
-            showToast("保存しました（保存済みタブを確認）");
-        };
-
         let cameraX = 0, cameraY = 0, zoom = 1.0;
         let isPanning = false;
         let lastRawPos = {x: 0, y: 0};
@@ -364,104 +303,23 @@
         const LONG_PRESS_DURATION = 500;
         let globalBaseAngle = 0; 
         let globalIsCW = true;
+        let isTouching = false;
+        let savedData = [];
+        try { savedData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch(e) { savedData = []; }
 
-        numericInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('saveBtn').click(); } });
-        slopeInput.addEventListener('input', () => {
-            const h = parseFloat(slopeInput.value);
-            if (!isNaN(h)) {
-                const deg = Math.atan(h / 100) * 180 / Math.PI;
-                slopeResult.innerText = deg.toFixed(1) + '°';
-            } else { slopeResult.innerText = '0.0°'; }
-        });
-
-        function resize() {
-            const rect = canvas.parentElement.getBoundingClientRect();
-            canvas.width = rect.width;
-            canvas.height = rect.height;
-            draw();
-        }
-        window.addEventListener('resize', resize);
-        resize();
-        setTimeout(resize, 100);
-
-        function getRawCoords(e) {
-            const rect = canvas.getBoundingClientRect();
-            const t = (e.touches && e.touches.length > 0) ? e.touches[0] : e;
-            return { x: t.clientX - rect.left, y: t.clientY - rect.top };
-        }
+        // --- 基本ロジック ---
+        function persistData() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(savedData)); } catch(e) {} }
+        function showToast(msg) { const toast = document.getElementById('toast'); if (!toast) return; toast.innerText = msg; toast.style.opacity = '1'; setTimeout(() => { toast.style.opacity = '0'; }, 2000); }
+        function getRawCoords(e) { const rect = canvas.getBoundingClientRect(); const t = (e.touches && e.touches.length > 0) ? e.touches[0] : e; return { x: t.clientX - rect.left, y: t.clientY - rect.top }; }
         function w2s(w) { return { x: w.x * zoom + cameraX, y: w.y * zoom + cameraY }; }
         function s2w(s) { return { x: (s.x - cameraX) / zoom, y: (s.y - cameraY) / zoom }; }
-        function distToSegment(p, v, w) {
-            const l2 = Math.pow(v.x - w.x, 2) + Math.pow(v.y - w.y, 2); if (l2 == 0) return Math.hypot(p.x - v.x, p.y - v.y);
-            let t = Math.max(0, Math.min(1, ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2));
-            return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
-        }
+        function distToSegment(p, v, w) { const l2 = Math.pow(v.x - w.x, 2) + Math.pow(v.y - w.y, 2); if (l2 == 0) return Math.hypot(p.x - v.x, p.y - v.y); let t = Math.max(0, Math.min(1, ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2)); return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y))); }
+        function saveState() { const state = { points: JSON.parse(JSON.stringify(points)), manualLengths: {...manualLengths}, fixedAngles: {...fixedAngles}, isClosed, ppx, globalBaseAngle, globalIsCW }; actionHistory.push(state); if (actionHistory.length > 50) actionHistory.shift(); }
+        function undo() { if (actionHistory.length === 0) return; const state = actionHistory.pop(); points = state.points; manualLengths = state.manualLengths; fixedAngles = state.fixedAngles; isClosed = state.isClosed; ppx = state.ppx; globalBaseAngle = state.globalBaseAngle; globalIsCW = state.globalIsCW; rebuildGeometry(false); draw(); }
 
-        document.getElementById('executeBtn').onclick = () => {
-            if (!isClosed) { showToast("図形を閉じてから実行してください"); return; }
-            saveState();
-            const N = points.length;
-            let targetAutoIdx = -1;
-            for (let i = N - 1; i >= 0; i--) { if (fixedAngles[i] === undefined) { targetAutoIdx = i; break; } }
-            if (targetAutoIdx === -1) targetAutoIdx = N - 1;
-            const shiftAmount = (N - 1 - targetAutoIdx + N) % N;
-            if (shiftAmount !== 0) {
-                let newPts = [], newMan = {}, newFix = {};
-                for (let i = 0; i < N; i++) {
-                    const oldIdx = (i - shiftAmount + N) % N;
-                    newPts[i] = points[oldIdx];
-                    if (manualLengths[oldIdx] !== undefined) newMan[i] = manualLengths[oldIdx];
-                    if (fixedAngles[oldIdx] !== undefined) newFix[i] = fixedAngles[oldIdx];
-                }
-                points = newPts; manualLengths = newMan; fixedAngles = newFix;
-            }
-            delete manualLengths[N - 1]; delete fixedAngles[0]; delete fixedAngles[N - 1];
-            let hasMan = false;
-            for(let i = 0; i < N; i++) { if(manualLengths[i] !== undefined) { const d = Math.hypot(points[(i+1)%N].x - points[i].x, points[(i+1)%N].y - points[i].y); ppx = d / manualLengths[i]; hasMan = true; break; } }
-            if(!hasMan) { const d = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y); ppx = d / 10; }
-            for (let i = 0; i < N - 1; i++) { if (manualLengths[i] === undefined) { const d = Math.hypot(points[(i+1)%N].x - points[i].x, points[(i+1)%N].y - points[i].y); manualLengths[i] = Math.round((d / ppx) * 100) / 100; } }
-            let rawA = Math.atan2(points[1].y - points[0].y, points[1].x - points[0].x);
-            globalBaseAngle = Math.round(rawA / (Math.PI / 2)) * (Math.PI / 2);
-            let s = 0; for(let i = 0; i < N; i++) s += points[i].x * points[(i+1)%N].y - points[(i+1)%N].x * points[i].y;
-            globalIsCW = s > 0;
-            for (let i = 1; i < N - 1; i++) {
-                if (fixedAngles[i] === undefined) {
-                    const prev = points[(i-1+N)%N], curr = points[i], next = points[(i+1)%N];
-                    const aIn = Math.atan2(curr.y - prev.y, curr.x - prev.x), aOut = Math.atan2(next.y - curr.y, next.x - curr.x);
-                    let t = aOut - aIn; while(t < -Math.PI) t += Math.PI*2; while(t > Math.PI) t -= Math.PI*2;
-                    fixedAngles[i] = ((globalIsCW && t < 0) || (!globalIsCW && t > 0)) ? 270 : 90;
-                }
-            }
-            rebuildGeometry(true); draw(); showToast("計算・再作図しました");
-        };
-
-        function rebuildGeometry(shouldFit = false) {
-            if (points.length < 3 || !isClosed) return;
-            let logical = new Array(points.length); logical[0] = {x: 0, y: 0}; let curAngle = 0;
-            for (let i = 0; i < points.length - 1; i++) {
-                let len = manualLengths[i] !== undefined ? manualLengths[i] : (Math.hypot(points[i+1].x - points[i].x, points[i+1].y - points[i].y) / ppx);
-                if (len < 0.01) len = 0.01;
-                logical[i+1] = { x: logical[i].x + len * Math.cos(curAngle), y: logical[i].y + len * Math.sin(curAngle) };
-                if (i < points.length - 2) {
-                    if (fixedAngles[i+1] !== undefined) { curAngle += (globalIsCW ? (180 - fixedAngles[i+1]) * Math.PI / 180 : -(180 - fixedAngles[i+1]) * Math.PI / 180); } 
-                    else { const a1 = Math.atan2(points[i+1].y - points[i].y, points[i+1].x - points[i].x), a2 = Math.atan2(points[i+2].y - points[i+1].y, points[i+2].x - points[i+1].x); let turn = a2 - a1; while(turn < -Math.PI) turn += Math.PI*2; while(turn > Math.PI) turn -= Math.PI*2; curAngle += turn; }
-                }
-            }
-            const currentB = Math.atan2(logical[1].y - logical[0].y, logical[1].x - logical[0].x), rot = globalBaseAngle - currentB;
-            for (let i = 0; i < logical.length; i++) { const p = logical[i]; points[i] = { x: (p.x * Math.cos(rot) - p.y * Math.sin(rot)) * ppx, y: (p.x * Math.sin(rot) + p.y * Math.cos(rot)) * ppx }; }
-            let area = 0; for (let i = 0; i < points.length; i++) { const p1 = points[i], p2 = points[(i + 1) % points.length]; area += p1.x * p2.y - p2.x * p1.y; }
-            areaEl.innerText = Math.abs(area / (2 * ppx * ppx)).toFixed(2);
-            
-            if (shouldFit) {
-                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-                points.forEach(p => { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); });
-                const pad = 40; 
-                zoom = Math.min((canvas.width - pad*2) / (maxX-minX||1), (canvas.height - pad*2) / (maxY-minY||1));
-                cameraX = canvas.width/2 - ((minX+maxX)/2)*zoom; cameraY = canvas.height/2 - ((minY+maxY)/2)*zoom;
-            }
-        }
-
+        // --- 描画ロジック ---
         function draw() {
+            if (!ctx) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             if (points.length === 0) return;
             if (isClosed) { ctx.beginPath(); ctx.moveTo(w2s(points[0]).x, w2s(points[0]).y); for (let i = 1; i < points.length; i++) ctx.lineTo(w2s(points[i]).x, w2s(points[i]).y); ctx.closePath(); ctx.fillStyle = 'rgba(94, 92, 230, 0.15)'; ctx.fill(); }
@@ -483,45 +341,108 @@
                 const p1 = w2s(points[i]), p2 = w2s(points[(i + 1) % points.length]), isAuto = isClosed && i === points.length - 1, midX = (p1.x + p2.x) / 2, midY = (p1.y + p2.y) / 2;
                 const d = Math.hypot(points[(i+1)%points.length].x - points[i].x, points[(i+1)%points.length].y - points[i].y), val = manualLengths[i] !== undefined ? manualLengths[i] : (d / ppx), label = `${val.toFixed(2)}m`;
                 ctx.font = 'bold 16px ui-monospace, monospace'; const tw = ctx.measureText(label).width;
-                ctx.fillStyle = isAuto ? 'rgba(10, 132, 255, 0.9)' : (manualLengths[i] !== undefined ? 'rgba(255,255,255,0.95)' : 'rgba(142,142,147,0.95)');
+                ctx.fillStyle = isAuto ? '#3b82f6' : (manualLengths[i] !== undefined ? 'rgba(255,255,255,0.95)' : 'rgba(142,142,147,0.95)');
                 ctx.beginPath(); ctx.roundRect(midX - tw/2 - 10, midY - 14, tw + 20, 28, 6); ctx.fill();
-                ctx.fillStyle = (manualLengths[i] !== undefined || isAuto) ? '#000000' : '#FFFFFF'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, midX, midY);
+                ctx.fillStyle = isAuto ? '#FFFFFF' : (manualLengths[i] !== undefined ? '#000000' : '#FFFFFF'); 
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, midX, midY);
             }
-            if (points.length >= 2) fitBtn.classList.remove('hidden'); else fitBtn.classList.add('hidden');
         }
 
         function drawAngleInfo(p_world, i) {
             const prev = w2s(points[(i-1+points.length)%points.length]), curr = w2s(points[i]), next = w2s(points[(i+1)%points.length]);
-            const aIn = Math.atan2(curr.y - prev.y, curr.x - prev.x), aOut = Math.atan2(next.y - curr.y, next.x - curr.x);
-            let turn = aOut - aIn; while(turn < -Math.PI) turn += Math.PI*2; while(turn > Math.PI) turn -= Math.PI*2;
-            let actualDeg = globalIsCW ? (180 - turn * 180 / Math.PI) : (180 + turn * 180 / Math.PI); while(actualDeg <= 0) actualDeg += 360; while(actualDeg > 360) actualDeg -= 360;
-            const isFixed = fixedAngles[i] !== undefined, displayDeg = isFixed ? fixedAngles[i] : (Math.round(actualDeg * 10) / 10), label = `${displayDeg}°`;
-            ctx.font = 'bold 14px sans-serif'; const tw = ctx.measureText(label).width;
             const a1 = Math.atan2(prev.y - curr.y, prev.x - curr.x), a2 = Math.atan2(next.y - curr.y, next.x - curr.x);
             let diff = a2 - a1; while(diff <= -Math.PI) diff += Math.PI * 2; while(diff > Math.PI) diff -= Math.PI * 2;
+            let actualDeg = globalIsCW ? (180 - diff * 180 / Math.PI) : (180 + diff * 180 / Math.PI); while(actualDeg <= 0) actualDeg += 360; while(actualDeg > 360) actualDeg -= 360;
+            const isFixed = fixedAngles[i] !== undefined, displayDeg = isFixed ? fixedAngles[i] : (Math.round(actualDeg * 10) / 10), label = `${displayDeg}°`;
+            ctx.font = 'bold 14px sans-serif'; const tw = ctx.measureText(label).width;
             let bisectorAngle = a1 + diff / 2; if (globalIsCW) { if (diff > 0) bisectorAngle += Math.PI; } else { if (diff < 0) bisectorAngle += Math.PI; }
-            if (displayDeg > 180) bisectorAngle += Math.PI;
             const dist = 50, tx = curr.x + Math.cos(bisectorAngle) * dist, ty = curr.y + Math.sin(bisectorAngle) * dist;
             ctx.fillStyle = 'rgba(44, 44, 46, 0.9)'; ctx.beginPath(); ctx.roundRect(tx - tw/2 - 6, ty - 12, tw + 12, 24, 6); ctx.fill();
             ctx.fillStyle = isFixed ? '#FF453A' : '#8E8E93'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, tx, ty);
         }
 
+        // --- 計算ロジック ---
+        function rebuildGeometry(shouldFit = false) {
+            if (points.length < 3 || !isClosed) return;
+            let logical = new Array(points.length); logical[0] = {x: 0, y: 0}; let curAngle = 0;
+            for (let i = 0; i < points.length - 1; i++) {
+                let len = manualLengths[i] !== undefined ? manualLengths[i] : (Math.hypot(points[i+1].x - points[i].x, points[i+1].y - points[i].y) / ppx);
+                if (len < 0.01) len = 0.01; logical[i+1] = { x: logical[i].x + len * Math.cos(curAngle), y: logical[i].y + len * Math.sin(curAngle) };
+                if (i < points.length - 2) { if (fixedAngles[i+1] !== undefined) { curAngle += (globalIsCW ? (180 - fixedAngles[i+1]) * Math.PI / 180 : -(180 - fixedAngles[i+1]) * Math.PI / 180); } else { const a1 = Math.atan2(points[i+1].y - points[i].y, points[i+1].x - points[i].x), a2 = Math.atan2(points[i+2].y - points[i+1].y, points[i+2].x - points[i+1].x); let turn = a2 - a1; while(turn < -Math.PI) turn += Math.PI*2; while(turn > Math.PI) turn -= Math.PI*2; curAngle += turn; } }
+            }
+            const currentB = Math.atan2(logical[1].y - logical[0].y, logical[1].x - logical[0].x), rot = globalBaseAngle - currentB;
+            for (let i = 0; i < logical.length; i++) { const p = logical[i]; points[i] = { x: (p.x * Math.cos(rot) - p.y * Math.sin(rot)) * ppx, y: (p.x * Math.sin(rot) + p.y * Math.cos(rot)) * ppx }; }
+            let area = 0; for (let i = 0; i < points.length; i++) { const p1 = points[i], p2 = points[(i + 1) % points.length]; area += p1.x * p2.y - p2.x * p1.y; }
+            areaEl.innerText = Math.abs(area / (2 * ppx * ppx)).toFixed(2);
+            if (shouldFit) {
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                points.forEach(p => { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); });
+                const pad = 40; zoom = Math.min((canvas.width - pad*2) / (maxX-minX||1), (canvas.height - pad*2) / (maxY-minY||1));
+                cameraX = canvas.width/2 - ((minX+maxX)/2)*zoom; cameraY = canvas.height/2 - ((minY+maxY)/2)*zoom;
+            }
+        }
+
+        // --- タッチ管理ロジック ---
         function handleStart(e) {
             if (modalCooldown || document.getElementById('historyView').classList.contains('active')) return;
             const raw = getRawCoords(e); lastRawPos = raw; startRawPos = {x: raw.x, y: raw.y}; const pos = s2w(raw); hasMoved = false; longPressTriggered = false;
             if (e.target.id === 'canvas' && e.cancelable) e.preventDefault();
+            
             if (!isClosed) { saveState(); if (points.length >= 3 && Math.hypot(raw.x - w2s(points[0]).x, raw.y - w2s(points[0]).y) < 50) { finalizeDrawing(); return; } points.push(pos); draw(); return; }
-            const vIdx = points.findIndex(p => Math.hypot(raw.x - w2s(p).x, raw.y - w2s(p).y) < 40);
-            if (vIdx !== -1) { draggingIdx = vIdx; selectedIdx = vIdx; pressProgress.style.opacity = '1'; let start = Date.now(); pressTimer = setInterval(() => { let elapsed = Date.now() - start; let progress = Math.min(100, (elapsed / LONG_PRESS_DURATION) * 100); pressProgress.style.width = progress + '%'; if (elapsed >= LONG_PRESS_DURATION) { clearInterval(pressTimer); pressTimer = null; longPressTriggered = true; } }, 20); draw(); return; }
-            for (let i = 0; i < points.length; i++) { if (distToSegment(raw, w2s(points[i]), w2s(points[(i+1)%points.length])) < 40) { targetEdgeIdx = i; return; } }
+
+            // ★優先判定の統合ロジック
+            let hitType = null;
+            let hitIdx = -1;
+            let minDist = Infinity;
+
+            // 1. 頂点（角）判定を最優先かつ少し広めに
+            points.forEach((p, i) => {
+                const d = Math.hypot(raw.x - w2s(p).x, raw.y - w2s(p).y);
+                if (d < 45 && d < minDist) { minDist = d; hitType = 'vertex'; hitIdx = i; }
+            });
+
+            // 2. 頂点に近くない場合のみ、ラベルや辺を判定
+            if (minDist > 25) { 
+                // 数値ラベル判定
+                for (let i = 0; i < points.length; i++) {
+                    const p1 = w2s(points[i]), p2 = w2s(points[(i+1)%points.length]);
+                    const midX = (p1.x + p2.x) / 2, midY = (p1.y + p2.y) / 2;
+                    const d = Math.hypot(raw.x - midX, raw.y - midY);
+                    if (d < 45 && d < minDist) { minDist = d; hitType = 'label'; hitIdx = i; }
+                }
+                // 線分判定
+                for (let i = 0; i < points.length; i++) {
+                    const d = distToSegment(raw, w2s(points[i]), w2s(points[(i+1)%points.length]));
+                    if (d < 35 && d < minDist) { minDist = d; hitType = 'edge'; hitIdx = i; }
+                }
+            }
+
+            if (hitType === 'vertex') {
+                draggingIdx = hitIdx; selectedIdx = hitIdx; 
+                pressProgress.style.opacity = '1';
+                let start = Date.now();
+                pressTimer = setInterval(() => {
+                    let elapsed = Date.now() - start;
+                    let progress = Math.min(100, (elapsed / LONG_PRESS_DURATION) * 100);
+                    pressProgress.style.width = progress + '%';
+                    if (elapsed >= LONG_PRESS_DURATION) { clearInterval(pressTimer); pressTimer = null; longPressTriggered = true; }
+                }, 20);
+                draw(); return;
+            } else if (hitType === 'label' || hitType === 'edge') {
+                targetEdgeIdx = hitIdx; return;
+            }
+            
             isPanning = true;
         }
 
         function handleMove(e) {
-            if (draggingIdx === null && !isPanning && isClosed) return;
             const raw = getRawCoords(e); if (e.target.id === 'canvas' && e.cancelable) e.preventDefault();
             if (!isClosed) { draw(); return; }
-            if (Math.hypot(raw.x - startRawPos.x, raw.y - startRawPos.y) > 20) { hasMoved = true; if (pressTimer) { clearInterval(pressTimer); pressTimer = null; pressProgress.style.opacity = '0'; } }
+            // 遊びを少なく (20px -> 5px)
+            if (Math.hypot(raw.x - startRawPos.x, raw.y - startRawPos.y) > 5) { 
+                hasMoved = true; 
+                if (pressTimer) { clearInterval(pressTimer); pressTimer = null; pressProgress.style.opacity = '0'; } 
+            }
             if (isPanning) { if (hasMoved) { cameraX += raw.x - lastRawPos.x; cameraY += raw.y - lastRawPos.y; lastRawPos = raw; draw(); } return; }
             if (draggingIdx === null) return;
             if (hasMoved) { points[draggingIdx] = s2w(raw); rebuildGeometry(false); lastRawPos = raw; draw(); }
@@ -534,45 +455,77 @@
             draggingIdx = null; targetEdgeIdx = null; isPanning = false; draw();
         }
 
+        // --- 画面管理 ---
+        function resize() { if (!canvas) return; const rect = canvas.parentElement.getBoundingClientRect(); canvas.width = rect.width; canvas.height = rect.height; draw(); }
+        function switchTab(tab) { document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active')); document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active')); if (tab === 'draw') { document.getElementById('drawView').classList.add('active'); document.getElementById('tabDraw').classList.add('active'); resize(); } else { document.getElementById('historyView').classList.add('active'); document.getElementById('tabHistory').classList.add('active'); renderHistory(); } }
+        function renderHistory() { const list = document.getElementById('historyList'); if (savedData.length === 0) { list.innerHTML = `<div class="text-center text-[#8E8E93] py-20 font-bold">まだ保存されたデータはありません</div>`; return; } list.innerHTML = savedData.slice().reverse().map((data, idx) => { const actualIdx = savedData.length - 1 - idx; return `<div class="history-card"><input type="text" class="memo-input" placeholder="メモを入力..." value="${data.memo || ''}" onchange="updateMemo(${actualIdx}, this.value)"><div class="flex justify-between items-center mb-3 px-1"><span class="text-[#8E8E93] text-xs font-bold">${data.time}</span><span class="text-white font-black text-lg">${data.area} m²</span></div><img src="${data.img}" class="w-full rounded-xl border border-white/10 mb-3 bg-[#000]"><div class="flex gap-2"><button onclick="deleteHistory(${actualIdx})" class="flex-1 py-3 bg-[#2C2C2E] text-[#FF453A] rounded-xl font-bold text-sm">削除</button></div></div>`;}).join(''); }
+        function updateMemo(idx, val) { savedData[idx].memo = val; persistData(); showToast("メモを保存しました"); }
+        function deleteHistory(idx) { savedData.splice(idx, 1); persistData(); renderHistory(); showToast("削除しました"); }
         function finalizeDrawing() { saveState(); isClosed = true; rebuildGeometry(true); draw(); showToast("辺をタップで寸法、角を長押しで角度入力"); }
 
         function openModal() {
-            document.getElementById('quickAngle').classList.toggle('hidden', activeMode === 'edge');
-            document.getElementById('modalTitle').innerText = activeMode === 'edge' ? "寸法の入力" : "角度の入力";
-            const getA = (idx) => { const prev = w2s(points[(idx-1+points.length)%points.length]), curr = w2s(points[idx]), next = w2s(points[(idx+1)%points.length]); const aIn = Math.atan2(curr.y - prev.y, curr.x - prev.x), aOut = Math.atan2(next.y - curr.y, next.x - curr.x); let turn = aOut-aIn; while(turn < -Math.PI) turn += Math.PI*2; while(turn > Math.PI) turn -= Math.PI*2; let actualD = globalIsCW ? (180-turn*180/Math.PI) : (180+turn*180/Math.PI); while(actualD <= 0) actualD += 360; while(actualD > 360) actualD -= 360; return Math.round(actualD*10)/10; };
+            document.getElementById('quickAngle').classList.toggle('hidden', activeMode === 'edge'); document.getElementById('modalTitle').innerText = activeMode === 'edge' ? "寸法の入力" : "角度の入力";
+            const getA = (idx) => { const prev = w2s(points[(idx-1+points.length)%points.length]), curr = w2s(points[idx]), next = w2s(points[(idx+1)%points.length]); const a1 = Math.atan2(prev.y-curr.y, prev.x-curr.x), a2 = Math.atan2(next.y-curr.y, next.x-curr.x); let diff = a2-a1; while(diff<=-Math.PI) diff+=Math.PI*2; while(diff>Math.PI) diff-=Math.PI*2; let actualD = globalIsCW?(180-diff*180/Math.PI):(180+diff*180/Math.PI); while(actualD<=0) actualD+=360; while(actualD>360) actualD-=360; return Math.round(actualD*10)/10; };
             let val = activeMode === 'edge' ? manualLengths[selectedIdx] : fixedAngles[selectedIdx];
             if (!val && activeMode === 'edge') val = (Math.hypot(points[(selectedIdx+1)%points.length].x-points[selectedIdx].x, points[(selectedIdx+1)%points.length].y-points[selectedIdx].y)/ppx).toFixed(2);
             else if (!val && isClosed && activeMode === 'angle') val = getA(selectedIdx);
-            const edgeInfo = document.getElementById('edgeInfo'), makeAutoBtn = document.getElementById('makeAutoBtn');
+            const edgeInfo = document.getElementById('edgeInfo');
             if (activeMode === 'edge' && isClosed) {
-                edgeInfo.classList.remove('hidden'); makeAutoBtn.classList.toggle('hidden', selectedIdx === points.length - 1);
+                edgeInfo.classList.remove('hidden');
                 const p1 = points[selectedIdx], p2 = points[(selectedIdx+1)%points.length], dx = p2.x-p1.x, dy = p2.y-p1.y, cos = Math.cos(-globalBaseAngle), sin = Math.sin(-globalBaseAngle), ldx = dx*cos-dy*sin, ldy = dx*sin+dy*cos;
-                let relDeg = Math.abs(Math.atan2(ldy, ldx)*180/Math.PI)%180; if (relDeg > 90) relDeg = 180-relDeg;
-                document.getElementById('edgeAngle').innerText = relDeg.toFixed(1) + '°';
+                let relDeg = Math.abs(Math.atan2(ldy, ldx)*180/Math.PI)%180; if (relDeg > 90) relDeg = 180-relDeg; document.getElementById('edgeAngle').innerText = relDeg.toFixed(1) + '°';
                 const currentL = val ? parseFloat(val) : 0;
                 if (relDeg > 89.5 || relDeg < 0.5) { document.getElementById('edgeSlopeH').innerText = "0.0"; document.getElementById('edgeTotalDrop').innerText = "0"; } 
                 else { if (relDeg <= 45) { const h = 100*Math.tan(relDeg*Math.PI/180); document.getElementById('edgeSlopeH').innerText = h.toFixed(1); document.getElementById('edgeTotalDrop').innerText = Math.round(currentL*Math.sin(relDeg*Math.PI/180)*1000); } else { const w = 100/Math.tan(relDeg*Math.PI/180); document.getElementById('edgeSlopeH').innerText = w.toFixed(1); document.getElementById('edgeTotalDrop').innerText = Math.round(currentL*Math.cos(relDeg*Math.PI/180)*1000); } }
-            } else { edgeInfo.classList.add('hidden'); makeAutoBtn.classList.add('hidden'); }
+            } else { edgeInfo.classList.add('hidden'); }
             numericInput.value = val || ''; inputModal.classList.add('active'); numericInput.focus(); numericInput.select();
         }
 
-        document.getElementById('saveBtn').onclick = (e) => { e.stopPropagation(); saveState(); const val = parseFloat(numericInput.value); if (activeMode === 'edge') { if (!isNaN(val) && val > 0) manualLengths[selectedIdx] = val; else delete manualLengths[selectedIdx]; } else { if (!isNaN(val) && val >= 0) fixedAngles[selectedIdx] = val; else delete fixedAngles[selectedIdx]; } inputModal.classList.remove('active'); modalCooldown = true; setTimeout(() => { modalCooldown = false; }, 350); draw(); };
-        document.getElementById('cancelModal').onclick = (e) => { e.stopPropagation(); inputModal.classList.remove('active'); modalCooldown = true; setTimeout(() => { modalCooldown = false; }, 350); draw(); };
-        document.getElementById('undoBtn').onclick = () => { undo(); };
-        document.getElementById('fitBtn').onclick = () => { rebuildGeometry(true); draw(); };
-        document.getElementById('clearNumsBtn').onclick = function() { saveState(); manualLengths = {}; fixedAngles = {}; draw(); };
-        document.getElementById('resetBtn').onclick = function() { saveState(); points = []; manualLengths = {}; fixedAngles = {}; isClosed = false; cameraX=0; cameraY=0; zoom=1; draw(); fitBtn.classList.add('hidden'); };
-        document.getElementById('setQuick90').onclick = () => { numericInput.value = 90; document.getElementById('saveBtn').click(); };
-        document.getElementById('setQuick270').onclick = () => { numericInput.value = 270; document.getElementById('saveBtn').click(); };
-        document.getElementById('setQuick45').onclick = () => { numericInput.value = 45; document.getElementById('saveBtn').click(); };
+        // --- 初期化 ---
+        window.onload = function() {
+            canvas = document.getElementById('canvas'); ctx = canvas.getContext('2d');
+            areaEl = document.getElementById('areaDisplay'); inputModal = document.getElementById('inputModal');
+            numericInput = document.getElementById('numericInput'); fitBtn = document.getElementById('fitBtn');
+            slopeInput = document.getElementById('slopeInput'); slopeResult = document.getElementById('slopeResult');
+            pressProgress = document.getElementById('pressProgress'); exportBtn = document.getElementById('exportBtn');
 
-        let isTouching = false;
-        canvas.addEventListener('mousedown', (e) => { if (isTouching) return; handleStart(e); });
-        window.addEventListener('mousemove', (e) => { if (isTouching) return; handleMove(e); });
-        window.addEventListener('mouseup', (e) => { if (isTouching) return; handleEnd(); });
-        canvas.addEventListener('touchstart', (e) => { isTouching = true; if (e.touches.length === 2) { isPanning = false; draggingIdx = null; initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); initialZoom = zoom; const r = canvas.getBoundingClientRect(); initialPinchCenter = { x: (e.touches[0].clientX+e.touches[1].clientX)/2 - r.left, y: (e.touches[0].clientY+e.touches[1].clientY)/2 - r.top }; if (e.cancelable) e.preventDefault(); return; } handleStart(e); }, {passive:false});
-        window.addEventListener('touchmove', (e) => { if (isTouching && e.touches.length === 2 && initialPinchDist) { const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY), nz = Math.max(0.1, Math.min(10, initialZoom * (d / initialPinchDist))), r = nz / zoom; cameraX = initialPinchCenter.x - (initialPinchCenter.x - cameraX) * r; cameraY = initialPinchCenter.y - (initialPinchCenter.y - cameraY) * r; zoom = nz; draw(); if (e.cancelable) e.preventDefault(); return; } handleMove(e); }, {passive:false});
-        window.addEventListener('touchend', (e) => { handleEnd(); setTimeout(() => { isTouching = false; }, 500); });
+            document.getElementById('saveBtn').onclick = (e) => { e.stopPropagation(); saveState(); const val = parseFloat(numericInput.value); if (activeMode === 'edge') { if (!isNaN(val) && val > 0) manualLengths[selectedIdx] = val; else delete manualLengths[selectedIdx]; } else { if (!isNaN(val) && val >= 0) fixedAngles[selectedIdx] = val; else delete fixedAngles[selectedIdx]; } inputModal.classList.remove('active'); modalCooldown = true; setTimeout(() => { modalCooldown = false; }, 350); rebuildGeometry(false); draw(); };
+            document.getElementById('cancelModal').onclick = (e) => { e.stopPropagation(); inputModal.classList.remove('active'); modalCooldown = true; setTimeout(() => { modalCooldown = false; }, 350); draw(); };
+            exportBtn.onclick = () => { if (points.length < 3 || !isClosed) { showToast("図形を閉じてから保存してください"); return; } const dataUrl = canvas.toDataURL("image/png"); savedData.push({ img: dataUrl, area: areaEl.innerText, time: new Date().toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), memo: '' }); persistData(); showToast("保存しました（保存済みタブを確認）"); };
+            numericInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); document.getElementById('saveBtn').click(); } });
+            slopeInput.addEventListener('input', () => { const h = parseFloat(slopeInput.value); if (!isNaN(h)) { const deg = Math.atan(h / 100) * 180 / Math.PI; slopeResult.innerText = deg.toFixed(1) + '°'; } else { slopeResult.innerText = '0.0°'; } });
+            document.getElementById('undoBtn').onclick = undo;
+            document.getElementById('fitBtn').onclick = () => { rebuildGeometry(true); draw(); };
+            document.getElementById('clearNumsBtn').onclick = () => { saveState(); manualLengths = {}; fixedAngles = {}; draw(); };
+            document.getElementById('resetBtn').onclick = () => { saveState(); points = []; manualLengths = {}; fixedAngles = {}; isClosed = false; cameraX=0; cameraY=0; zoom=1; draw(); fitBtn.classList.add('hidden'); };
+            document.getElementById('setQuick90').onclick = () => { numericInput.value = 90; document.getElementById('saveBtn').click(); };
+            document.getElementById('setQuick270').onclick = () => { numericInput.value = 270; document.getElementById('saveBtn').click(); };
+            document.getElementById('setQuick45').onclick = () => { numericInput.value = 45; document.getElementById('saveBtn').click(); };
+            
+            document.getElementById('executeBtn').onclick = () => {
+                if (!isClosed) { showToast("図形を閉じてから実行してください"); return; }
+                saveState(); const N = points.length; let tIdx = -1; for (let i = N - 1; i >= 0; i--) { if (fixedAngles[i] === undefined) { tIdx = i; break; } }
+                if (tIdx === -1) tIdx = N - 1; const shift = (N - 1 - tIdx + N) % N;
+                if (shift !== 0) { let nP = [], nML = {}, nFA = {}; for (let i = 0; i < N; i++) { const oI = (i - shift + N) % N; nP[i] = points[oI]; if (manualLengths[oI] !== undefined) nML[i] = manualLengths[oI]; if (fixedAngles[oI] !== undefined) nFA[i] = fixedAngles[oI]; } points = nP; manualLengths = nML; fixedAngles = nFA; }
+                delete manualLengths[N - 1]; delete fixedAngles[0]; delete fixedAngles[N - 1];
+                let hM = false; for(let i = 0; i < N; i++) { if(manualLengths[i] !== undefined) { const d = Math.hypot(points[(i+1)%N].x - points[i].x, points[(i+1)%N].y - points[i].y); ppx = d / manualLengths[i]; hM = true; break; } }
+                if(!hM) { const d = Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y); ppx = d / 10; }
+                for (let i = 0; i < N - 1; i++) { if (manualLengths[i] === undefined) { const d = Math.hypot(points[(i+1)%N].x - points[i].x, points[(i+1)%N].y - points[i].y); manualLengths[i] = Math.round((d / ppx) * 100) / 100; } }
+                let rA = Math.atan2(points[1].y - points[0].y, points[1].x - points[0].x); globalBaseAngle = Math.round(rA / (Math.PI / 2)) * (Math.PI / 2);
+                let s = 0; for(let i = 0; i < N; i++) s += points[i].x * points[(i+1)%N].y - points[(i+1)%N].x * points[i].y; globalIsCW = s > 0;
+                for (let i = 1; i < N - 1; i++) { if (fixedAngles[i] === undefined) { const prev = points[(i-1+N)%N], curr = points[i], next = points[(i+1)%N]; const aIn = Math.atan2(curr.y-prev.y, curr.x-prev.x), aOut = Math.atan2(next.y-curr.y, next.x-curr.x); let t = aOut - aIn; while(t < -Math.PI) t += Math.PI*2; while(t > Math.PI) t -= Math.PI*2; fixedAngles[i] = ((globalIsCW && t < 0) || (!globalIsCW && t > 0)) ? 270 : 90; } }
+                rebuildGeometry(true); draw(); showToast("計算・再作図しました");
+            };
+
+            canvas.addEventListener('mousedown', (e) => { if (isTouching) return; handleStart(e); });
+            window.addEventListener('mousemove', (e) => { if (isTouching) return; handleMove(e); });
+            window.addEventListener('mouseup', (e) => { if (isTouching) return; handleEnd(); });
+            canvas.addEventListener('touchstart', (e) => { isTouching = true; if (e.touches.length === 2) { isPanning = false; draggingIdx = null; initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); initialZoom = zoom; const r = canvas.getBoundingClientRect(); initialPinchCenter = { x: (e.touches[0].clientX+e.touches[1].clientX)/2 - r.left, y: (e.touches[0].clientY+e.touches[1].clientY)/2 - r.top }; if (e.cancelable) e.preventDefault(); return; } handleStart(e); }, {passive:false});
+            window.addEventListener('touchmove', (e) => { if (isTouching && e.touches.length === 2 && initialPinchDist) { const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY), nz = Math.max(0.1, Math.min(10, initialZoom * (d / initialPinchDist))), r = nz / zoom; cameraX = initialPinchCenter.x - (initialPinchCenter.x - cameraX) * r; cameraY = initialPinchCenter.y - (initialPinchCenter.y - cameraY) * r; zoom = nz; draw(); if (e.cancelable) e.preventDefault(); return; } handleMove(e); }, {passive:false});
+            window.addEventListener('touchend', (e) => { handleEnd(); setTimeout(() => { isTouching = false; }, 500); });
+            
+            resize(); setTimeout(resize, 200);
+        };
     </script>
 </body>
 </html>
