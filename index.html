@@ -6,9 +6,10 @@
     <title>面積計算アプリ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 全体のスクロールを禁止し、1画面に収める */
+        /* iPhoneダークモードのデザイン：漆黒と深みのあるグレー */
         body { 
-            background-color: #f1f5f9; 
+            background-color: #000000; 
+            color: #FFFFFF;
             margin: 0;
             height: 100vh; 
             font-size: 16px; 
@@ -30,26 +31,40 @@
             display: none; 
             position: fixed; 
             inset: 0; 
-            background: rgba(15, 23, 42, 0.85); 
+            background: rgba(0, 0, 0, 0.9); 
             align-items: flex-start; 
             justify-content: center; 
             z-index: 200; 
-            backdrop-filter: blur(8px); 
+            backdrop-filter: blur(15px); 
             padding-top: 10vh; 
         }
         .modal.active { display: flex; }
         
-        /* iPhoneのノッチ・ステータスバー対策 */
-        header { padding-top: calc(env(safe-area-inset-top) + 20px); }
+        header { padding-top: 10px; background: #1C1C1E; }
         
         .btn-tap { transition: transform 0.1s; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 800; }
-        .btn-tap:active { transform: scale(0.94); }
+        .btn-tap:active { transform: scale(0.94); opacity: 0.8; }
         
-        .control-btn { height: 36px; padding: 0 12px; border-radius: 10px; font-size: 16px !important; border: 1px solid transparent; transition: all 0.2s; white-space: nowrap; }
+        .header-btn { 
+            height: 36px; 
+            padding: 0 12px; 
+            border-radius: 10px; 
+            font-size: 15px !important; 
+            font-weight: 800;
+            border: none;
+            transition: all 0.2s; 
+            white-space: nowrap; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
         input[type="number"] {
             -moz-appearance: textfield;
             appearance: textfield;
+            background: #2C2C2E;
+            color: #FFFFFF;
+            border: 1px solid #3A3A3C;
         }
         input[type="number"]::-webkit-outer-spin-button,
         input[type="number"]::-webkit-inner-spin-button {
@@ -57,7 +72,6 @@
             margin: 0;
         }
         
-        /* 入力数字を巨大化 */
         #numericInput { 
             font-size: 3rem !important; 
             font-family: ui-monospace, monospace !important;
@@ -65,11 +79,11 @@
             line-height: 1.2 !important;
             width: 100%;
             padding: 0 10px;
+            border-radius: 16px;
         }
         
-        #pressProgress { position: fixed; top: 0; left: 0; height: 6px; background: #6366f1; z-index: 300; width: 0; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+        #pressProgress { position: fixed; top: 0; left: 0; height: 6px; background: #5E5CE6; z-index: 300; width: 0; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
         
-        /* フレックスレイアウト構造 */
         .app-container {
             display: flex;
             flex-direction: column;
@@ -77,129 +91,160 @@
             width: 100vw;
         }
 
-        .canvas-area { 
-            flex: 1; 
-            position: relative; 
-            background: #fff;
-            overflow: hidden;
+        .view-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .tab-view { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+        .tab-view.active { display: flex; }
+
+        .canvas-area { flex: 1; position: relative; background: #1C1C1E; overflow: hidden; }
+        
+        #historyView { overflow-y: auto; background: #000; padding: 16px; }
+        .history-card { background: #1C1C1E; border-radius: 20px; padding: 16px; margin-bottom: 16px; border: 1px solid #2C2C2E; }
+
+        .tab-bar { 
+            background: #1C1C1E; 
+            border-bottom: 1px solid #2C2C2E; 
+            display: flex; 
+            padding: 3px; 
+            gap: 4px; 
         }
         
-        /* iOSズーム防止（16px以上を保証） */
+        .tab-item { 
+            flex: 1; 
+            padding: 6px; 
+            text-align: center; 
+            font-weight: 900; 
+            border-radius: 8px; 
+            color: #8E8E93; 
+            transition: all 0.2s; 
+            font-size: 14px !important; 
+        }
+        .tab-item.active { background: #3A3A3C; color: #FFFFFF; }
+        
         button, input, select, textarea { font-size: 16px !important; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* システムアクセントカラー */
+        .bg-system-indigo { background-color: #5E5CE6; }
+        .bg-system-gray { background-color: #2C2C2E; color: #FFFFFF; }
+        .bg-system-red { background-color: #FF453A; color: #FFFFFF; }
+        .bg-system-orange { background-color: #FF9500; color: #FFFFFF; }
+        .text-system-indigo { color: #5E5CE6; }
     </style>
 </head>
-<body class="font-sans text-slate-900">
+<body class="font-sans">
 
     <div id="pressProgress"></div>
-    <div id="toast" class="fixed top-40 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-4 rounded-full text-base font-bold opacity-0 pointer-events-none transition-opacity duration-300 z-[60] shadow-lg whitespace-nowrap"></div>
+    <div id="toast" class="fixed top-40 left-1/2 -translate-x-1/2 bg-white text-black px-6 py-4 rounded-full text-base font-bold opacity-0 pointer-events-none transition-opacity duration-300 z-[60] shadow-lg whitespace-nowrap"></div>
 
     <div class="app-container">
-        <!-- Header -->
-        <header class="bg-white/95 backdrop-blur border-b px-2 py-3 flex flex-col shrink-0 shadow-sm z-50">
-            <div class="flex justify-center w-full mb-3">
-                <div class="bg-slate-900 text-white px-10 py-2.5 rounded-2xl flex items-baseline gap-3 border border-slate-700 shadow-md">
-                    <span class="text-base font-black opacity-70">面積</span>
-                    <span id="areaDisplay" class="text-4xl font-black tabular-nums tracking-tighter text-indigo-400">--.--</span>
-                    <span class="text-base font-bold text-indigo-400/70">m²</span>
-                </div>
-            </div>
-            
-            <div class="flex items-center justify-between px-2 gap-3">
-                <div class="flex gap-2">
-                    <button type="button" id="undoBtn" class="h-9 px-4 bg-slate-100 text-slate-700 rounded-lg btn-tap text-base flex items-center gap-1 font-bold">
-                        戻る
-                    </button>
-                    <button type="button" id="fitBtn" class="h-9 px-4 bg-indigo-50 text-indigo-700 rounded-lg btn-tap text-base font-bold hidden">
-                        全体
-                    </button>
-                </div>
-                <div class="flex gap-2">
-                    <button type="button" id="clearNumsBtn" class="btn-tap control-btn bg-amber-50 text-amber-700 font-bold border-amber-100">数値クリア</button>
-                    <button type="button" id="resetBtn" class="btn-tap control-btn bg-red-50 text-red-600 font-black border-red-100">リセット</button>
-                </div>
-            </div>
-        </header>
-
-        <!-- 勾配バー -->
-        <div class="bg-indigo-50 border-b px-4 py-2 flex items-center gap-4 shrink-0 shadow-inner">
-            <div class="flex items-center shrink-0">
-                <svg width="50" height="30" viewBox="0 0 60 40" class="text-indigo-700">
-                    <path d="M10 25 L50 25 L50 5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M10 25 L50 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2" opacity="0.3"/>
-                    <text x="30" y="38" font-size="14" text-anchor="middle" font-weight="900" fill="currentColor">100</text>
-                </svg>
-            </div>
-            <div class="flex-1 flex items-center">
-                <input type="number" id="slopeInput" placeholder="勾配(mm)" 
-                    class="w-full h-10 bg-white border-2 border-indigo-100 rounded-xl text-base px-4 font-bold text-indigo-600 focus:outline-none focus:border-indigo-400 tabular-nums shadow-sm"
-                    onclick="this.select()">
-            </div>
-            <div class="flex items-center justify-center min-w-[70px] bg-white h-10 rounded-xl border border-indigo-100 shadow-sm px-2">
-                <span id="slopeResult" class="text-base font-black text-indigo-900 tabular-nums">0.0°</span>
-            </div>
+        <!-- Tab Bar -->
+        <div class="tab-bar pt-[calc(env(safe-area-inset-top)+2px)]">
+            <div id="tabDraw" class="tab-item active" onclick="switchTab('draw')">作図</div>
+            <div id="tabHistory" class="tab-item" onclick="switchTab('history')">保存済み</div>
         </div>
 
-        <!-- 実行ボタン -->
-        <div class="bg-slate-100 border-b px-4 py-2 flex justify-center shrink-0 z-40 relative">
-            <button type="button" id="executeBtn" class="w-full bg-indigo-600 text-white font-black py-2.5 rounded-2xl shadow-lg btn-tap flex items-center justify-center gap-3 text-lg tracking-wider transition-colors active:bg-indigo-700">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10"/></svg>
-                計算・再作図を実行
-            </button>
-        </div>
+        <div class="view-content">
+            <!-- VIEW: 作図画面 -->
+            <div id="drawView" class="tab-view active">
+                <header class="border-b border-white/10 px-2 py-3 flex flex-col shrink-0">
+                    <div class="flex justify-center w-full mb-3">
+                        <div class="bg-white text-black px-10 py-2.5 rounded-2xl flex items-baseline gap-3 shadow-md">
+                            <span class="text-base font-black opacity-60">面積</span>
+                            <span id="areaDisplay" class="text-4xl font-black tabular-nums tracking-tighter">--.--</span>
+                            <span class="text-base font-bold opacity-60">m²</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between px-2 gap-3 overflow-x-auto scrollbar-hide">
+                        <div class="flex gap-2">
+                            <button type="button" id="undoBtn" class="header-btn bg-system-gray text-white btn-tap">戻る</button>
+                            <button type="button" id="fitBtn" class="header-btn bg-system-indigo text-white btn-tap">全体</button>
+                        </div>
+                        <div class="flex gap-1.5">
+                            <button type="button" id="clearNumsBtn" class="header-btn bg-system-gray text-white btn-tap">数値クリア</button>
+                            <button type="button" id="resetBtn" class="header-btn bg-system-red btn-tap">リセット</button>
+                        </div>
+                    </div>
+                </header>
 
-        <!-- Canvas Area -->
-        <div class="canvas-area">
-            <div class="absolute inset-0 opacity-10 pointer-events-none" style="background-image: radial-gradient(#6366f1 1.5px, transparent 1.5px); background-size: 32px 32px;"></div>
-            <canvas id="canvas" class="relative z-10 w-full h-full"></canvas>
+                <div class="bg-[#1C1C1E] border-b border-white/10 px-4 py-2 flex items-center gap-4 shrink-0 shadow-inner">
+                    <div class="flex items-center shrink-0">
+                        <svg width="50" height="30" viewBox="0 0 60 40" class="text-system-indigo">
+                            <path d="M10 25 L50 25 L50 5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M10 25 L50 5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3,2" opacity="0.3"/>
+                            <text x="30" y="38" font-size="14" text-anchor="middle" font-weight="900" fill="currentColor">100</text>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <input type="number" id="slopeInput" placeholder="勾配(mm)" class="w-full h-10 rounded-xl text-base px-4 font-bold text-white bg-[#2C2C2E] border-none focus:ring-2 focus:ring-indigo-500 tabular-nums shadow-sm" onclick="this.select()">
+                    </div>
+                    <div class="flex items-center justify-center min-w-[70px] bg-[#2C2C2E] h-10 rounded-xl border border-white/10 px-2">
+                        <span id="slopeResult" class="text-base font-black text-system-indigo tabular-nums">0.0°</span>
+                    </div>
+                </div>
+
+                <!-- 実行・保存ボタン: 比率3:1、保存をオレンジに -->
+                <div class="bg-black border-b border-white/10 px-4 py-2 flex gap-3 justify-center shrink-0 z-40 relative">
+                    <button type="button" id="executeBtn" class="flex-[3] bg-system-indigo text-white font-black py-2.5 rounded-2xl shadow-lg btn-tap flex items-center justify-center gap-3 text-lg tracking-wider transition-colors active:bg-indigo-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10"/></svg>
+                        計算・再作図
+                    </button>
+                    <button type="button" id="exportBtn" class="flex-[1] bg-system-orange text-white font-black py-2.5 rounded-2xl shadow-lg btn-tap flex items-center justify-center gap-2 text-lg transition-opacity active:opacity-70">
+                        保存
+                    </button>
+                </div>
+
+                <div class="canvas-area">
+                    <div class="absolute inset-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(#FFFFFF 1px, transparent 1px); background-size: 32px 32px;"></div>
+                    <canvas id="canvas" class="relative z-10 w-full h-full"></canvas>
+                </div>
+            </div>
+
+            <!-- VIEW: 保存済み画面 -->
+            <div id="historyView" class="tab-view scrollbar-hide">
+                <div id="historyList" class="flex flex-col">
+                    <div class="text-center text-[#8E8E93] py-20 font-bold">まだ保存されたデータはありません</div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Modal -->
     <div id="inputModal" class="modal px-4 pb-12">
-        <div class="bg-white rounded-[2.5rem] w-full max-w-sm shadow-2xl border border-slate-100 flex flex-col max-h-[85vh] overflow-hidden">
+        <div class="bg-[#1C1C1E] rounded-[2.5rem] w-full max-w-sm shadow-2xl border border-white/10 flex flex-col max-h-[85vh] overflow-hidden">
             <div class="p-8 overflow-y-auto flex flex-col gap-6">
-                <h2 id="modalTitle" class="text-2xl font-black text-slate-800 text-center text-indigo-900">設定</h2>
-                
+                <h2 id="modalTitle" class="text-2xl font-black text-center text-white">設定</h2>
                 <div id="inputGroup">
-                    <p class="text-slate-500 text-base text-center font-bold mb-2">数値を入力してください</p>
+                    <p class="text-[#8E8E93] text-base text-center font-bold mb-2">数値を入力してください</p>
                     <div class="relative">
-                        <input type="number" id="numericInput" inputmode="decimal" placeholder="0.00" 
-                            class="bg-slate-50 border-2 border-slate-200 rounded-2xl text-center focus:border-indigo-600 focus:bg-white outline-none transition-all text-indigo-600 font-bold tabular-nums">
-                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 font-black text-xl uppercase pointer-events-none">m</span>
+                        <input type="number" id="numericInput" inputmode="decimal" placeholder="0.00" class="rounded-2xl text-center focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-bold tabular-nums w-full">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 font-black text-xl pointer-events-none">m</span>
                     </div>
                 </div>
-
                 <div id="quickAngle" class="hidden grid grid-cols-3 gap-3">
-                    <button type="button" id="setQuick90" class="py-4 bg-indigo-50 text-indigo-700 rounded-2xl font-black text-base btn-tap">90°</button>
-                    <button type="button" id="setQuick270" class="py-4 bg-indigo-50 text-indigo-700 rounded-2xl font-black text-base btn-tap">270°</button>
-                    <button type="button" id="setQuick45" class="py-4 bg-indigo-50 text-indigo-700 rounded-2xl font-black text-base btn-tap">45°</button>
+                    <button type="button" id="setQuick90" class="py-4 bg-[#2C2C2E] text-white rounded-2xl font-black text-base btn-tap">90°</button>
+                    <button type="button" id="setQuick270" class="py-4 bg-[#2C2C2E] text-white rounded-2xl font-black text-base btn-tap">270°</button>
+                    <button type="button" id="setQuick45" class="py-4 bg-[#2C2C2E] text-white rounded-2xl font-black text-base btn-tap">45°</button>
                 </div>
-
                 <div class="flex gap-4 shrink-0">
-                    <button type="button" id="cancelModal" class="flex-1 h-14 bg-slate-100 text-slate-600 rounded-2xl font-bold text-base btn-tap">キャンセル</button>
-                    <button type="button" id="saveBtn" class="flex-1 h-14 bg-indigo-600 text-white rounded-2xl font-black text-base shadow-lg btn-tap">適用</button>
+                    <button type="button" id="cancelModal" class="flex-1 h-14 bg-[#2C2C2E] text-white rounded-2xl font-bold text-base btn-tap">キャンセル</button>
+                    <button type="button" id="saveBtn" class="flex-1 h-14 bg-system-indigo text-white rounded-2xl font-black text-base btn-tap">適用</button>
                 </div>
-
-                <button type="button" id="makeAutoBtn" class="hidden w-full py-4 bg-indigo-50 text-indigo-700 rounded-2xl font-black text-base btn-tap border-2 border-indigo-100 shadow-sm mt-1">✨ この辺を自動計算にして</button>
-
-                <div id="edgeInfo" class="hidden bg-slate-50 border border-slate-200 p-6 rounded-3xl mt-2">
-                    <div class="flex justify-between items-center mb-5 border-b border-slate-200 pb-3">
-                        <div class="text-base text-indigo-500 font-black">勾配と高低差</div>
-                        <div class="text-base font-bold text-slate-600 bg-white px-3 py-1 rounded-lg border" id="edgeAngle">0.0°</div>
+                <button type="button" id="makeAutoBtn" class="hidden w-full py-4 bg-[#2C2C2E] text-system-indigo rounded-2xl font-black text-base btn-tap mt-1">✨ この辺を自動計算にする</button>
+                <div id="edgeInfo" class="hidden bg-[#2C2C2E] border border-white/5 p-6 rounded-3xl mt-2">
+                    <div class="flex justify-between items-center mb-5 border-b border-white/5 pb-3">
+                        <div class="text-base text-system-indigo font-black">勾配と高低差</div>
+                        <div class="text-base font-bold text-white bg-black/30 px-3 py-1 rounded-lg border border-white/10" id="edgeAngle">0.0°</div>
                     </div>
                     <div class="grid grid-cols-2 gap-4 relative">
-                        <div class="absolute left-1/2 top-0 bottom-0 w-px bg-slate-200 -translate-x-1/2"></div>
+                        <div class="absolute left-1/2 top-0 bottom-0 w-px bg-white/5 -translate-x-1/2"></div>
                         <div class="pr-2">
-                            <div class="text-sm text-slate-500 font-bold mb-2">水平100mmにつき</div>
-                            <div class="text-base font-black text-slate-700 flex items-end gap-1">
-                                <span class="text-indigo-600 text-2xl" id="edgeSlopeH">0.0</span><span class="text-sm text-slate-400">mm</span>
-                            </div>
+                            <div class="text-sm text-[#8E8E93] font-bold mb-2">水平100mmにつき</div>
+                            <div class="text-base font-black text-white flex items-end gap-1"><span class="text-[#5E5CE6] text-2xl" id="edgeSlopeH">0.0</span><span class="text-sm text-white/40">mm</span></div>
                         </div>
                         <div class="pl-2">
-                            <div class="text-sm text-slate-500 font-bold mb-2" id="edgeLengthDisplay">水平 0.00m で</div>
-                            <div class="text-base font-black text-slate-700 flex items-end gap-1">
-                                <span class="text-indigo-600 text-2xl" id="edgeTotalDrop">0</span><span class="text-sm text-slate-400">mm</span>
-                            </div>
+                            <div class="text-sm text-[#8E8E93] font-bold mb-2" id="edgeLengthDisplay">水平 0.00m で</div>
+                            <div class="text-base font-black text-white flex items-end gap-1"><span class="text-[#5E5CE6] text-2xl" id="edgeTotalDrop">0</span><span class="text-sm text-white/40">mm</span></div>
                         </div>
                     </div>
                 </div>
@@ -211,9 +256,50 @@
         function showToast(msg) {
             const toast = document.getElementById('toast');
             if (!toast) return;
-            toast.innerText = msg;
-            toast.style.opacity = '1';
+            toast.innerText = msg; toast.style.opacity = '1';
             setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+        }
+
+        let savedData = []; 
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            if (tab === 'draw') {
+                document.getElementById('drawView').classList.add('active');
+                document.getElementById('tabDraw').classList.add('active');
+                resize();
+            } else {
+                document.getElementById('historyView').classList.add('active');
+                document.getElementById('tabHistory').classList.add('active');
+                renderHistory();
+            }
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('historyList');
+            if (savedData.length === 0) {
+                list.innerHTML = `<div class="text-center text-[#8E8E93] py-20 font-bold">まだ保存されたデータはありません</div>`;
+                return;
+            }
+            list.innerHTML = savedData.slice().reverse().map((data, idx) => `
+                <div class="history-card">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-[#8E8E93] text-xs font-bold">${data.time}</span>
+                        <span class="text-white font-black text-lg">${data.area} m²</span>
+                    </div>
+                    <img src="${data.img}" class="w-full rounded-xl border border-white/10 mb-3 bg-[#000]">
+                    <div class="flex gap-2">
+                        <button onclick="deleteHistory(${savedData.length - 1 - idx})" class="flex-1 py-3 bg-[#2C2C2E] text-[#FF453A] rounded-xl font-bold text-sm">削除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function deleteHistory(idx) {
+            savedData.splice(idx, 1);
+            renderHistory();
+            showToast("削除しました");
         }
 
         const canvas = document.getElementById('canvas');
@@ -221,9 +307,11 @@
         const areaEl = document.getElementById('areaDisplay');
         const inputModal = document.getElementById('inputModal');
         const numericInput = document.getElementById('numericInput');
+        const fitBtn = document.getElementById('fitBtn');
         const slopeInput = document.getElementById('slopeInput');
         const slopeResult = document.getElementById('slopeResult');
         const pressProgress = document.getElementById('pressProgress');
+        const exportBtn = document.getElementById('exportBtn');
         
         let points = [];        
         let manualLengths = {}; 
@@ -239,42 +327,33 @@
         let actionHistory = [];
 
         function saveState() {
-            const state = {
-                points: JSON.parse(JSON.stringify(points)),
-                manualLengths: {...manualLengths},
-                fixedAngles: {...fixedAngles},
-                isClosed,
-                ppx,
-                globalBaseAngle,
-                globalIsCW
-            };
-            actionHistory.push(state);
-            if (actionHistory.length > 50) actionHistory.shift();
+            const state = { points: JSON.parse(JSON.stringify(points)), manualLengths: {...manualLengths}, fixedAngles: {...fixedAngles}, isClosed, ppx, globalBaseAngle, globalIsCW };
+            actionHistory.push(state); if (actionHistory.length > 50) actionHistory.shift();
         }
 
         function undo() {
             if (actionHistory.length === 0) return;
             const state = actionHistory.pop();
-            points = state.points;
-            manualLengths = state.manualLengths;
-            fixedAngles = state.fixedAngles;
-            isClosed = state.isClosed;
-            ppx = state.ppx;
-            globalBaseAngle = state.globalBaseAngle;
-            globalIsCW = state.globalIsCW;
-            rebuildGeometry(false);
-            draw();
+            points = state.points; manualLengths = state.manualLengths; fixedAngles = state.fixedAngles; isClosed = state.isClosed; ppx = state.ppx; globalBaseAngle = state.globalBaseAngle; globalIsCW = state.globalIsCW;
+            rebuildGeometry(false); draw();
         }
+
+        exportBtn.onclick = () => {
+            if (points.length < 3 || !isClosed) { showToast("図形を閉じてから保存してください"); return; }
+            const dataUrl = canvas.toDataURL("image/png");
+            savedData.push({
+                img: dataUrl,
+                area: areaEl.innerText,
+                time: new Date().toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            });
+            showToast("保存しました（保存済みタブを確認）");
+        };
 
         let cameraX = 0, cameraY = 0, zoom = 1.0;
         let isPanning = false;
         let lastRawPos = {x: 0, y: 0};
         let startRawPos = {x: 0, y: 0};
-        let initialPinchDist = null;
-        let initialZoom = 1;
-        let initialPinchCenter = null;
         let hasMoved = false; 
-
         let pressTimer = null;
         const LONG_PRESS_DURATION = 500;
         let globalBaseAngle = 0; 
@@ -290,9 +369,9 @@
         });
 
         function resize() {
-            if (!canvas.parentElement) return;
-            canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
             draw();
         }
         window.addEventListener('resize', resize);
@@ -342,7 +421,7 @@
             for (let i = 1; i < N - 1; i++) {
                 if (fixedAngles[i] === undefined) {
                     const prev = points[(i-1+N)%N], curr = points[i], next = points[(i+1)%N];
-                    const aIn = Math.atan2(curr.y-prev.y, curr.x-prev.x), aOut = Math.atan2(next.y-curr.y, next.x-curr.x);
+                    const aIn = Math.atan2(curr.y - prev.y, curr.x - prev.x), aOut = Math.atan2(next.y - curr.y, next.x - curr.x);
                     let t = aOut - aIn; while(t < -Math.PI) t += Math.PI*2; while(t > Math.PI) t -= Math.PI*2;
                     fixedAngles[i] = ((globalIsCW && t < 0) || (!globalIsCW && t > 0)) ? 270 : 90;
                 }
@@ -359,17 +438,20 @@
                 logical[i+1] = { x: logical[i].x + len * Math.cos(curAngle), y: logical[i].y + len * Math.sin(curAngle) };
                 if (i < points.length - 2) {
                     if (fixedAngles[i+1] !== undefined) { curAngle += (globalIsCW ? (180 - fixedAngles[i+1]) * Math.PI / 180 : -(180 - fixedAngles[i+1]) * Math.PI / 180); } 
-                    else { const a1 = Math.atan2(points[i+1].y-points[i].y, points[i+1].x-points[i].x), a2 = Math.atan2(points[i+2].y-points[i+1].y, points[i+2].x-points[i+1].x); let t = a2-a1; while(t < -Math.PI) t += Math.PI*2; while(t > Math.PI) t -= Math.PI*2; curAngle += t; }
+                    else { const a1 = Math.atan2(points[i+1].y - points[i].y, points[i+1].x - points[i].x), a2 = Math.atan2(points[i+2].y - points[i+1].y, points[i+2].x - points[i+1].x); let turn = a2 - a1; while(turn < -Math.PI) turn += Math.PI*2; while(turn > Math.PI) turn -= Math.PI*2; curAngle += turn; }
                 }
             }
             const currentB = Math.atan2(logical[1].y - logical[0].y, logical[1].x - logical[0].x), rot = globalBaseAngle - currentB;
             for (let i = 0; i < logical.length; i++) { const p = logical[i]; points[i] = { x: (p.x * Math.cos(rot) - p.y * Math.sin(rot)) * ppx, y: (p.x * Math.sin(rot) + p.y * Math.cos(rot)) * ppx }; }
             let area = 0; for (let i = 0; i < points.length; i++) { const p1 = points[i], p2 = points[(i + 1) % points.length]; area += p1.x * p2.y - p2.x * p1.y; }
             areaEl.innerText = Math.abs(area / (2 * ppx * ppx)).toFixed(2);
+            
+            // ★パディングを40に縮小して図形を大きく表示
             if (shouldFit) {
                 let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
                 points.forEach(p => { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); });
-                const pad = 60; zoom = Math.min((canvas.width - pad*2) / (maxX-minX||1), (canvas.height - pad*2) / (maxY-minY||1));
+                const pad = 40; 
+                zoom = Math.min((canvas.width - pad*2) / (maxX-minX||1), (canvas.height - pad*2) / (maxY-minY||1));
                 cameraX = canvas.width/2 - ((minX+maxX)/2)*zoom; cameraY = canvas.height/2 - ((minY+maxY)/2)*zoom;
             }
         }
@@ -377,30 +459,30 @@
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             if (points.length === 0) return;
-            if (isClosed) {
-                ctx.beginPath(); ctx.moveTo(w2s(points[0]).x, w2s(points[0]).y);
-                for (let i = 1; i < points.length; i++) ctx.lineTo(w2s(points[i]).x, w2s(points[i]).y);
-                ctx.closePath(); ctx.fillStyle = 'rgba(99, 102, 241, 0.08)'; ctx.fill();
-            }
+            if (isClosed) { ctx.beginPath(); ctx.moveTo(w2s(points[0]).x, w2s(points[0]).y); for (let i = 1; i < points.length; i++) ctx.lineTo(w2s(points[i]).x, w2s(points[i]).y); ctx.closePath(); ctx.fillStyle = 'rgba(94, 92, 230, 0.15)'; ctx.fill(); }
             const limit = isClosed ? points.length : points.length - 1;
             for (let i = 0; i < limit; i++) {
                 const p1 = w2s(points[i]), p2 = w2s(points[(i + 1) % points.length]), isAuto = isClosed && i === points.length - 1;
                 ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineWidth = 6; ctx.lineCap = 'round';
-                if (isAuto) { ctx.setLineDash([8, 8]); ctx.strokeStyle = '#3b82f6'; } else { ctx.setLineDash([]); ctx.strokeStyle = manualLengths[i] !== undefined ? '#1e293b' : '#cbd5e1'; }
+                if (isAuto) { ctx.setLineDash([8, 8]); ctx.strokeStyle = '#0A84FF'; } else { ctx.setLineDash([]); ctx.strokeStyle = manualLengths[i] !== undefined ? '#FFFFFF' : '#8E8E93'; }
                 ctx.stroke();
             }
             ctx.setLineDash([]); 
             points.forEach((p_world, i) => { if (isClosed) drawAngleInfo(p_world, i); });
-            points.forEach((p_world, i) => { const p = w2s(p_world); ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI * 2); ctx.fillStyle = (i === 0) ? '#000' : 'white'; ctx.fill(); ctx.strokeStyle = '#6366f1'; ctx.lineWidth = 3; ctx.stroke(); });
+            points.forEach((p_world, i) => { 
+                const p = w2s(p_world); ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI * 2); 
+                ctx.fillStyle = (i === 0) ? '#FFFFFF' : '#1C1C1E'; ctx.fill(); 
+                ctx.strokeStyle = '#5E5CE6'; ctx.lineWidth = 3; ctx.stroke(); 
+            });
             for (let i = 0; i < limit; i++) {
                 const p1 = w2s(points[i]), p2 = w2s(points[(i + 1) % points.length]), isAuto = isClosed && i === points.length - 1, midX = (p1.x + p2.x) / 2, midY = (p1.y + p2.y) / 2;
-                const d = Math.hypot(points[(i+1)%points.length].x - points[i].x, points[(i+1)%points.length].y - points[i].y), val = manualLengths[i] !== undefined ? manualLengths[i] : (d / ppx), label = isAuto ? `Auto ${val.toFixed(2)}m` : `${val.toFixed(2)}m`;
+                const d = Math.hypot(points[(i+1)%points.length].x - points[i].x, points[(i+1)%points.length].y - points[i].y), val = manualLengths[i] !== undefined ? manualLengths[i] : (d / ppx), label = `${val.toFixed(2)}m`;
                 ctx.font = 'bold 16px ui-monospace, monospace'; const tw = ctx.measureText(label).width;
-                ctx.fillStyle = isAuto ? 'rgba(239, 246, 255, 0.95)' : (manualLengths[i] !== undefined ? '#1e293b' : 'rgba(100, 116, 139, 0.95)');
+                ctx.fillStyle = isAuto ? 'rgba(10, 132, 255, 0.9)' : (manualLengths[i] !== undefined ? 'rgba(255,255,255,0.95)' : 'rgba(142,142,147,0.95)');
                 ctx.beginPath(); ctx.roundRect(midX - tw/2 - 10, midY - 14, tw + 20, 28, 6); ctx.fill();
-                ctx.fillStyle = isAuto ? '#3b82f6' : 'white'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, midX, midY);
+                ctx.fillStyle = (manualLengths[i] !== undefined || isAuto) ? '#000000' : '#FFFFFF'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, midX, midY);
             }
-            if (!isClosed) fitBtn.classList.add('hidden'); else fitBtn.classList.remove('hidden');
+            if (points.length >= 2) fitBtn.classList.remove('hidden'); else fitBtn.classList.add('hidden');
         }
 
         function drawAngleInfo(p_world, i) {
@@ -415,17 +497,12 @@
             let bisectorAngle = a1 + diff / 2; if (globalIsCW) { if (diff > 0) bisectorAngle += Math.PI; } else { if (diff < 0) bisectorAngle += Math.PI; }
             if (displayDeg > 180) bisectorAngle += Math.PI;
             const dist = 50, tx = curr.x + Math.cos(bisectorAngle) * dist, ty = curr.y + Math.sin(bisectorAngle) * dist;
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)'; ctx.beginPath(); ctx.roundRect(tx - tw/2 - 6, ty - 12, tw + 12, 24, 6); ctx.fill();
-            ctx.fillStyle = isFixed ? '#f43f5e' : '#94a3b8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, tx, ty);
-            if (displayDeg === 90 || displayDeg === 270) {
-                const a1_ang = Math.atan2(prev.y - curr.y, prev.x - curr.x), a2_ang = Math.atan2(next.y - curr.y, next.x - curr.x);
-                ctx.save(); ctx.translate(curr.x, curr.y); ctx.beginPath(); ctx.moveTo(Math.cos(a1_ang)*16, Math.sin(a1_ang)*16); ctx.lineTo(Math.cos(a1_ang)*16+Math.cos(a2_ang)*16, Math.sin(a1_ang)*16+Math.sin(a2_ang)*16); ctx.lineTo(Math.cos(a2_ang)*16, Math.sin(a2_ang)*16);
-                ctx.strokeStyle = isFixed ? '#f43f5e' : '#94a3b8'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.restore();
-            }
+            ctx.fillStyle = 'rgba(44, 44, 46, 0.9)'; ctx.beginPath(); ctx.roundRect(tx - tw/2 - 6, ty - 12, tw + 12, 24, 6); ctx.fill();
+            ctx.fillStyle = isFixed ? '#FF453A' : '#8E8E93'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, tx, ty);
         }
 
         function handleStart(e) {
-            if (modalCooldown) return;
+            if (modalCooldown || document.getElementById('historyView').classList.contains('active')) return;
             const raw = getRawCoords(e); lastRawPos = raw; startRawPos = {x: raw.x, y: raw.y}; const pos = s2w(raw); hasMoved = false; longPressTriggered = false;
             if (e.target.id === 'canvas' && e.cancelable) e.preventDefault();
             if (!isClosed) { saveState(); if (points.length >= 3 && Math.hypot(raw.x - w2s(points[0]).x, raw.y - w2s(points[0]).y) < 50) { finalizeDrawing(); return; } points.push(pos); draw(); return; }
@@ -436,6 +513,7 @@
         }
 
         function handleMove(e) {
+            if (draggingIdx === null && !isPanning && isClosed) return;
             const raw = getRawCoords(e); if (e.target.id === 'canvas' && e.cancelable) e.preventDefault();
             if (!isClosed) { draw(); return; }
             if (Math.hypot(raw.x - startRawPos.x, raw.y - startRawPos.y) > 20) { hasMoved = true; if (pressTimer) { clearInterval(pressTimer); pressTimer = null; pressProgress.style.opacity = '0'; } }
@@ -451,12 +529,12 @@
             draggingIdx = null; targetEdgeIdx = null; isPanning = false; draw();
         }
 
-        function finalizeDrawing() { saveState(); isClosed = true; rebuildGeometry(false); draw(); showToast("辺をタップで寸法、角を長押しで角度入力"); }
+        function finalizeDrawing() { saveState(); isClosed = true; rebuildGeometry(true); draw(); showToast("辺をタップで寸法、角を長押しで角度入力"); }
 
         function openModal() {
             document.getElementById('quickAngle').classList.toggle('hidden', activeMode === 'edge');
             document.getElementById('modalTitle').innerText = activeMode === 'edge' ? "寸法の入力" : "角度の入力";
-            const getA = (idx) => { const prev = w2s(points[(idx-1+points.length)%points.length]), curr = w2s(points[idx]), next = w2s(points[(idx+1)%points.length]); const aIn = Math.atan2(curr.y-prev.y, curr.x-prev.x), aOut = Math.atan2(next.y-curr.y, next.x-curr.x); let turn = aOut-aIn; while(turn < -Math.PI) turn += Math.PI*2; while(turn > Math.PI) turn -= Math.PI*2; let actualD = globalIsCW ? (180-turn*180/Math.PI) : (180+turn*180/Math.PI); while(actualD <= 0) actualD += 360; while(actualD > 360) actualD -= 360; return Math.round(actualD*10)/10; };
+            const getA = (idx) => { const prev = w2s(points[(idx-1+points.length)%points.length]), curr = w2s(points[idx]), next = w2s(points[(idx+1)%points.length]); const aIn = Math.atan2(curr.y - prev.y, curr.x - prev.x), aOut = Math.atan2(next.y - curr.y, next.x - curr.x); let turn = aOut-aIn; while(turn < -Math.PI) turn += Math.PI*2; while(turn > Math.PI) turn -= Math.PI*2; let actualD = globalIsCW ? (180-turn*180/Math.PI) : (180+turn*180/Math.PI); while(actualD <= 0) actualD += 360; while(actualD > 360) actualD -= 360; return Math.round(actualD*10)/10; };
             let val = activeMode === 'edge' ? manualLengths[selectedIdx] : fixedAngles[selectedIdx];
             if (!val && activeMode === 'edge') val = (Math.hypot(points[(selectedIdx+1)%points.length].x-points[selectedIdx].x, points[(selectedIdx+1)%points.length].y-points[selectedIdx].y)/ppx).toFixed(2);
             else if (!val && isClosed && activeMode === 'angle') val = getA(selectedIdx);
@@ -466,10 +544,9 @@
                 const p1 = points[selectedIdx], p2 = points[(selectedIdx+1)%points.length], dx = p2.x-p1.x, dy = p2.y-p1.y, cos = Math.cos(-globalBaseAngle), sin = Math.sin(-globalBaseAngle), ldx = dx*cos-dy*sin, ldy = dx*sin+dy*cos;
                 let relDeg = Math.abs(Math.atan2(ldy, ldx)*180/Math.PI)%180; if (relDeg > 90) relDeg = 180-relDeg;
                 document.getElementById('edgeAngle').innerText = relDeg.toFixed(1) + '°';
-                const currentL = val ? parseFloat(val) : 0, lenH = currentL*Math.cos(relDeg*Math.PI/180), lenV = currentL*Math.sin(relDeg*Math.PI/180);
-                if (relDeg > 89.5) { document.getElementById('edgeSlopeH').innerText = "0.0"; document.getElementById('edgeTotalDrop').innerText = "0"; } 
-                else if (relDeg < 0.5) { document.getElementById('edgeSlopeH').innerText = "0.0"; document.getElementById('edgeTotalDrop').innerText = "0"; } 
-                else { if (relDeg <= 45) { const h = 100*Math.tan(relDeg*Math.PI/180); document.getElementById('edgeSlopeH').innerText = h.toFixed(1); document.getElementById('edgeTotalDrop').innerText = Math.round(lenV*1000); } else { const w = 100/Math.tan(relDeg*Math.PI/180); document.getElementById('edgeSlopeH').innerText = w.toFixed(1); document.getElementById('edgeTotalDrop').innerText = Math.round(lenH*1000); } }
+                const currentL = val ? parseFloat(val) : 0;
+                if (relDeg > 89.5 || relDeg < 0.5) { document.getElementById('edgeSlopeH').innerText = "0.0"; document.getElementById('edgeTotalDrop').innerText = "0"; } 
+                else { if (relDeg <= 45) { const h = 100*Math.tan(relDeg*Math.PI/180); document.getElementById('edgeSlopeH').innerText = h.toFixed(1); document.getElementById('edgeTotalDrop').innerText = Math.round(currentL*Math.sin(relDeg*Math.PI/180)*1000); } else { const w = 100/Math.tan(relDeg*Math.PI/180); document.getElementById('edgeSlopeH').innerText = w.toFixed(1); document.getElementById('edgeTotalDrop').innerText = Math.round(currentL*Math.cos(relDeg*Math.PI/180)*1000); } }
             } else { edgeInfo.classList.add('hidden'); makeAutoBtn.classList.add('hidden'); }
             numericInput.value = val || ''; inputModal.classList.add('active'); numericInput.focus(); numericInput.select();
         }
@@ -477,8 +554,9 @@
         document.getElementById('saveBtn').onclick = (e) => { e.stopPropagation(); saveState(); const val = parseFloat(numericInput.value); if (activeMode === 'edge') { if (!isNaN(val) && val > 0) manualLengths[selectedIdx] = val; else delete manualLengths[selectedIdx]; } else { if (!isNaN(val) && val >= 0) fixedAngles[selectedIdx] = val; else delete fixedAngles[selectedIdx]; } inputModal.classList.remove('active'); modalCooldown = true; setTimeout(() => { modalCooldown = false; }, 350); draw(); };
         document.getElementById('cancelModal').onclick = (e) => { e.stopPropagation(); inputModal.classList.remove('active'); modalCooldown = true; setTimeout(() => { modalCooldown = false; }, 350); draw(); };
         document.getElementById('undoBtn').onclick = () => { undo(); };
+        document.getElementById('fitBtn').onclick = () => { rebuildGeometry(true); draw(); };
         document.getElementById('clearNumsBtn').onclick = function() { saveState(); manualLengths = {}; fixedAngles = {}; draw(); };
-        document.getElementById('resetBtn').onclick = function() { saveState(); points = []; manualLengths = {}; fixedAngles = {}; isClosed = false; cameraX=0; cameraY=0; zoom=1; draw(); };
+        document.getElementById('resetBtn').onclick = function() { saveState(); points = []; manualLengths = {}; fixedAngles = {}; isClosed = false; cameraX=0; cameraY=0; zoom=1; draw(); fitBtn.classList.add('hidden'); };
         document.getElementById('setQuick90').onclick = () => { numericInput.value = 90; document.getElementById('saveBtn').click(); };
         document.getElementById('setQuick270').onclick = () => { numericInput.value = 270; document.getElementById('saveBtn').click(); };
         document.getElementById('setQuick45').onclick = () => { numericInput.value = 45; document.getElementById('saveBtn').click(); };
