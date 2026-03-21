@@ -117,8 +117,15 @@
             color: #8E8E93; 
             transition: all 0.2s; 
             font-size: 14px !important; 
+            border: 2px solid transparent; /* ガタつき防止の透明ボーダー */
         }
-        .tab-item.active { background: #3A3A3C; color: #FFFFFF; }
+
+        /* 選択中のタブ：ボーダーをオレンジに */
+        .tab-item.active { 
+            background: #3A3A3C; 
+            color: #FFFFFF; 
+            border: 2px solid #FF9500; 
+        }
         
         button, input, select, textarea { font-size: 16px !important; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -167,7 +174,6 @@
                     </div>
                 </header>
 
-                <!-- 勾配バー: 背景をシルバー (#C7C7CC) に変更 -->
                 <div class="bg-[#C7C7CC] border-b border-black/10 px-4 py-2 flex items-center gap-4 shrink-0 shadow-inner">
                     <div class="flex items-center shrink-0">
                         <svg width="50" height="30" viewBox="0 0 60 40" class="text-black">
@@ -184,7 +190,6 @@
                     </div>
                 </div>
 
-                <!-- 実行・保存ボタン: 背景を #1C1C1E に戻し、縦幅をスリムに -->
                 <div class="bg-[#1C1C1E] border-b border-white/10 px-4 py-2 flex gap-3 justify-center shrink-0 z-40 relative">
                     <button type="button" id="executeBtn" class="flex-[3] bg-system-indigo text-white font-black py-1.5 rounded-2xl shadow-lg btn-tap flex items-center justify-center gap-3 text-lg tracking-wider transition-colors active:bg-indigo-700">
                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10"/></svg>
