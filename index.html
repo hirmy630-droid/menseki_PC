@@ -462,7 +462,10 @@
                 if (relDeg > 89.5 || relDeg < 0.5) { document.getElementById('edgeSlopeH').innerText = "0.0"; document.getElementById('edgeTotalDrop').innerText = "0"; } 
                 else { if (relDeg <= 45) { const h = 100*Math.tan(relDeg*Math.PI/180); document.getElementById('edgeSlopeH').innerText = h.toFixed(1); document.getElementById('edgeTotalDrop').innerText = Math.round(currentL*Math.sin(relDeg*Math.PI/180)*1000); } else { const w = 100/Math.tan(relDeg*Math.PI/180); document.getElementById('edgeSlopeH').innerText = w.toFixed(1); document.getElementById('edgeTotalDrop').innerText = Math.round(currentL*Math.cos(relDeg*Math.PI/180)*1000); } }
             } else { edgeInfo.classList.add('hidden'); }
-            numericInput.value = val || ''; inputModal.classList.add('active'); setTimeout(() => { numericInput.focus(); numericInput.select(); }, 100);
+            numericInput.value = val || ''; 
+            inputModal.classList.add('active'); 
+            numericInput.focus();
+            try { numericInput.setSelectionRange(0, numericInput.value.length); } catch(e){}
         }
 
         window.onload = function() {
