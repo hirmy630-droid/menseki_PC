@@ -113,12 +113,13 @@
             overflow: hidden; 
         }
 
+        /* 1mピッチの目安となるドット背景（22.4px = 1m目安） */
         #gridBg {
             position: absolute;
             inset: 0;
             background-image: radial-gradient(#FFFFFF 1px, transparent 1px);
             background-size: 22.4px 22.4px; 
-            opacity: 0.2;
+            opacity: 0.15;
             pointer-events: none;
             z-index: 1;
         }
@@ -277,11 +278,10 @@
     </div>
 
     <script>
-        const STORAGE_KEY = 'area_calc_data_v36';
+        const STORAGE_KEY = 'area_calc_data_v37';
         let canvas, ctx, areaEl, inputModal, fitBtn, slopeInput, slopeResult, exportBtn, gridBg;
         let points = [], manualLengths = {}, fixedAngles = {}, isClosed = false, selectedIdx = -1, activeMode = 'edge';
         
-        // ドットの間隔を絶対基準とする（1m = 22.4px）
         const BASE_DOT_PITCH = 22.4;
         let ppx = BASE_DOT_PITCH; 
 
@@ -434,14 +434,11 @@
             document.getElementById('setQuick270').onclick = () => { currentInputValue = "270"; isFirstInput = false; updateModalDisplay(); document.getElementById('saveBtn').click(); };
             document.getElementById('setQuick45').onclick = () => { currentInputValue = "45"; isFirstInput = false; updateModalDisplay(); document.getElementById('saveBtn').click(); };
             
-            // ★修正ポイント: 決定時にppx（ドット基準）を勝手に書き換えない
             document.getElementById('executeBtn').onclick = () => {
                 if (!isClosed) { showToast("図形を閉じてから実行してください"); return; }
                 saveState();
                 const N = points.length;
 
-                // 手入力された辺がある場合はその辺を基準にppxを再計算（正確な数値に合わせるため）
-                // 手入力がない場合は現在のppx（ドット基準）をそのまま使う
                 let hasManual = false;
                 for(let i = 0; i < N; i++) {
                     if(manualLengths[i] !== undefined) {
@@ -451,7 +448,6 @@
                     }
                 }
 
-                // 未入力の辺の長さを現在の見た目（ドット基準）で確定させる
                 for (let i = 0; i < N - 1; i++) {
                     if (manualLengths[i] === undefined) {
                         const d = Math.hypot(points[(i+1)%N].x - points[i].x, points[(i+1)%N].y - points[i].y);
@@ -459,15 +455,22 @@
                     }
                 }
 
-                // 未入力の角度を確定させる（スナップはさせず、見たままの角度を維持）
+                // ★スナップ処理：90度・270度に近い角度を自動で直角にする
                 for (let i = 1; i < N - 1; i++) {
                     if (fixedAngles[i] === undefined) {
-                        fixedAngles[i] = Math.round(getActualAngle(i) * 10) / 10;
+                        let actualD = getActualAngle(i);
+                        if (Math.abs(actualD - 90) <= 15) {
+                            fixedAngles[i] = 90;
+                        } else if (Math.abs(actualD - 270) <= 15) {
+                            fixedAngles[i] = 270;
+                        } else {
+                            fixedAngles[i] = Math.round(actualD * 10) / 10;
+                        }
                     }
                 }
 
                 updateCount++;
-                rebuildGeometry(false); // 勝手にズームを変えない
+                rebuildGeometry(false); 
                 draw();
                 showToast("数値を確定しました");
             };
