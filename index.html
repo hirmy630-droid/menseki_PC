@@ -96,14 +96,11 @@
         }
 
         input[type="text"] {
-            -moz-appearance: textfield;
             appearance: textfield;
             background: #2C2C2E;
             color: #FFFFFF;
             border: 1px solid #3A3A3C;
             font-size: 16px !important;
-            -webkit-user-select: text !important;
-            user-select: text !important;
         }
         
         .canvas-area { 
@@ -136,20 +133,7 @@
             pointer-events: none; 
         }
 
-        .brand-watermark {
-            position: absolute;
-            top: 10px;
-            right: 12px;
-            font-size: 14px;
-            font-weight: 200;
-            color: #8E8E93;
-            letter-spacing: 0.12em;
-            pointer-events: none;
-            z-index: 20;
-            opacity: 0.3;
-        }
-
-        #historyView { overflow-y: auto; background: #000; padding: 12px; padding-bottom: calc(var(--safe-bottom) + 80px); }
+        #historyView { overflow-y: auto; background: #000; padding: 12px; }
         .history-card { background: #1C1C1E; border-radius: 18px; padding: 14px; margin-bottom: 12px; border: 1px solid #2C2C2E; }
         .memo-input { width: 100%; background: transparent; border: none; color: #8E8E93; font-size: 14px; margin-bottom: 8px; font-weight: bold; }
 
@@ -221,7 +205,6 @@
 
                 <div class="canvas-area">
                     <div id="gridBg"></div>
-                    <div class="brand-watermark">KYOWAROOF</div>
                     <canvas id="canvas"></canvas>
                 </div>
                 
@@ -290,7 +273,7 @@
     </div>
 
     <script>
-        const STORAGE_KEY = 'area_calc_data_v45';
+        const STORAGE_KEY = 'area_calc_data_v46';
         const LONG_PRESS_DURATION = 450; 
         const BASE_DOT_PITCH = 22.4; 
 
@@ -298,11 +281,10 @@
         let points = [], manualLengths = {}, fixedAngles = {}, isClosed = false, selectedIdx = -1, activeMode = 'edge';
         let ppx = BASE_DOT_PITCH; 
 
-        let actionHistory = [], cameraX = 0, cameraY = 0, zoom = 1.0, startRawPos = {x: 0, y: 0}, hasMoved = false;
+        let cameraX = 0, cameraY = 0, zoom = 1.0, startRawPos = {x: 0, y: 0}, lastRawPos = {x: 0, y: 0}, hasMoved = false;
         let globalBaseAngle = 0, globalIsCW = true, initialPinchDist = null, initialZoom = 1, initialPinchCenter = null;
-        let updateCount = 0; 
-        let savedData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-        let currentInputValue = "0.00", isFirstInput = true;
+        let actionHistory = [], savedData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        let currentInputValue = "0.00", isFirstInput = true, isPanning = false;
         let pressTimer = null, longPressTriggered = false, targetVertexIdx = null, targetEdgeIdx = null;
 
         function persistData() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(savedData)); } catch(e) {} }
@@ -315,11 +297,10 @@
             let t = Math.max(0, Math.min(1, ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2));
             return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
         }
-        function saveState() { const state = { points: JSON.parse(JSON.stringify(points)), manualLengths: {...manualLengths}, fixedAngles: {...fixedAngles}, isClosed, ppx, globalBaseAngle, globalIsCW, updateCount }; actionHistory.push(state); if (actionHistory.length > 50) actionHistory.shift(); }
-        function undo() { if (actionHistory.length === 0) return; const state = actionHistory.pop(); points = state.points; manualLengths = state.manualLengths; fixedAngles = state.fixedAngles; isClosed = state.isClosed; ppx = state.ppx; globalBaseAngle = state.globalBaseAngle; globalIsCW = state.globalIsCW; updateCount = state.updateCount || 0; draw(); }
+        function saveState() { const state = { points: JSON.parse(JSON.stringify(points)), manualLengths: {...manualLengths}, fixedAngles: {...fixedAngles}, isClosed, ppx, globalBaseAngle, globalIsCW }; actionHistory.push(state); if (actionHistory.length > 50) actionHistory.shift(); }
+        function undo() { if (actionHistory.length === 0) return; const state = actionHistory.pop(); points = state.points; manualLengths = state.manualLengths; fixedAngles = state.fixedAngles; isClosed = state.isClosed; ppx = state.ppx; globalBaseAngle = state.globalBaseAngle; globalIsCW = state.globalIsCW; draw(); }
         function resize() { if (!canvas) return; const rect = canvas.parentElement.getBoundingClientRect(); canvas.width = rect.width; canvas.height = rect.height; draw(); }
 
-        // メートル数値に基づいた理論上の面積計算
         function calculateTheoreticalArea() {
             if (points.length < 3) return 0;
             let logical = [{x: 0, y: 0}]; let curAngle = 0;
@@ -334,12 +315,12 @@
                     } else { curAngle += (globalIsCW ? (180 - deg) * Math.PI / 180 : -(180 - deg) * Math.PI / 180); }
                 }
             }
-            let area = 0; for (let i = 0; i < logical.length; i++) { const p1 = logical[i], p2 = logical[(i + 1) % logical.length]; area += p1.x * p2.y - p2.x * p1.y; }
+            let area = 0;
+            for (let i = 0; i < logical.length; i++) { const p1 = logical[i], p2 = logical[(i + 1) % logical.length]; area += p1.x * p2.y - p2.x * p1.y; }
             return Math.abs(area / 2);
         }
 
-        // 図形の再構築（Execute時のみ呼ぶ）
-        function rebuildGeometry(shouldFit = false) {
+        function rebuildGeometry() {
             if (points.length < 3 || !isClosed) return;
             const startAnchor = { x: points[0].x, y: points[0].y };
             let logical = [{x: 0, y: 0}]; let curAngle = 0;
@@ -356,11 +337,28 @@
             areaEl.innerText = calculateTheoreticalArea().toFixed(2);
         }
 
+        // ★全体フィット機能の修正
+        function fitView() {
+            if (points.length === 0) return;
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            points.forEach(p => { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); });
+            const pad = 60;
+            const w = maxX - minX || 100, h = maxY - minY || 100;
+            zoom = Math.min((canvas.width - pad*2) / w, (canvas.height - pad*2) / h);
+            cameraX = canvas.width / 2 - ((minX + maxX) / 2) * zoom;
+            cameraY = canvas.height / 2 - ((minY + maxY) / 2) * zoom;
+            draw();
+        }
+
         function draw() {
             if (!ctx) return; ctx.clearRect(0, 0, canvas.width, canvas.height);
             if (gridBg) { const s = BASE_DOT_PITCH * zoom; gridBg.style.backgroundSize = `${s}px ${s}px`; gridBg.style.backgroundPosition = `${cameraX}px ${cameraY}px`; }
             if (points.length === 0) return;
-            if (isClosed) { ctx.beginPath(); ctx.moveTo(w2s(points[0]).x, w2s(points[0]).y); for (let i = 1; i < points.length; i++) ctx.lineTo(w2s(points[i]).x, w2s(points[i]).y); ctx.closePath(); ctx.fillStyle = 'rgba(94, 92, 230, 0.15)'; ctx.fill(); }
+            if (isClosed) {
+                ctx.beginPath(); ctx.moveTo(w2s(points[0]).x, w2s(points[0]).y);
+                for (let i = 1; i < points.length; i++) ctx.lineTo(w2s(points[i]).x, w2s(points[i]).y);
+                ctx.closePath(); ctx.fillStyle = 'rgba(94, 92, 230, 0.1)'; ctx.fill();
+            }
             const limit = isClosed ? points.length : points.length - 1;
             for (let i = 0; i < limit; i++) {
                 const p1 = w2s(points[i]), p2 = w2s(points[(i + 1) % points.length]), isAuto = isClosed && i === points.length - 1;
@@ -368,6 +366,7 @@
                 if (isAuto) { ctx.setLineDash([8, 8]); ctx.strokeStyle = '#3b82f6'; } else { ctx.setLineDash([]); ctx.strokeStyle = manualLengths[i] !== undefined ? '#FFFFFF' : '#8E8E93'; }
                 ctx.stroke();
             }
+            ctx.setLineDash([]);
             points.forEach((p_world, i) => { if (isClosed) {
                 const prev = points[(i-1+points.length)%points.length], curr = points[i], next = points[(i+1)%points.length];
                 const aIn = Math.atan2(curr.y-prev.y, curr.x-prev.x), aOut = Math.atan2(next.y-curr.y, next.x-curr.x);
@@ -376,10 +375,10 @@
                 const isFixed = fixedAngles[i] !== undefined, label = `${isFixed ? fixedAngles[i] : Math.round(actualDeg*10)/10}°`;
                 ctx.font = 'bold 12px sans-serif'; const tw = ctx.measureText(label).width;
                 const pCurrS = w2s(curr), pPrevS = w2s(prev), pNextS = w2s(next);
-                const v1 = { x: pPrevS.x-pCurrS.x, y: pPrevS.y-pCurrS.y }, v2 = { x: pNextS.x-pCurrS.x, y: pNextS.y-pCurrS.y };
-                const l1 = Math.hypot(v1.x, v1.y), l2 = Math.hypot(v2.x, v2.y);
-                let mid = { x: v1.x/l1 + v2.x/l2, y: v1.y/l1 + v2.y/l2 }; if (Math.hypot(mid.x, mid.y) < 0.001) mid = { x: -v1.y, y: v1.x };
-                let bisectorAngle = Math.atan2(mid.y, mid.x); if (actualDeg > 180) bisectorAngle += Math.PI;
+                const a1 = Math.atan2(pPrevS.y - pCurrS.y, pPrevS.x - pCurrS.x), a2 = Math.atan2(pNextS.y - pCurrS.y, pNextS.x - pCurrS.x);
+                let diff = a2 - a1; while(diff <= -Math.PI) diff += Math.PI * 2; while(diff > Math.PI) diff -= Math.PI * 2;
+                let bisectorAngle = a1 + diff / 2; if (globalIsCW) { if (diff > 0) bisectorAngle += Math.PI; } else { if (diff < 0) bisectorAngle += Math.PI; }
+                if (actualDeg > 180) bisectorAngle += Math.PI;
                 const tx = pCurrS.x + Math.cos(bisectorAngle)*42, ty = pCurrS.y + Math.sin(bisectorAngle)*42;
                 ctx.fillStyle = 'rgba(28, 28, 30, 0.9)'; ctx.beginPath(); ctx.roundRect(tx - tw/2 - 5, ty - 10, tw + 10, 20, 5); ctx.fill();
                 ctx.fillStyle = isFixed ? '#FF453A' : '#8E8E93'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, tx, ty);
@@ -397,7 +396,7 @@
         }
 
         function handleStart(e) {
-            const raw = getRawCoords(e); startRawPos = {x: raw.x, y: raw.y}; hasMoved = false; longPressTriggered = false;
+            const raw = getRawCoords(e); startRawPos = {x: raw.x, y: raw.y}; lastRawPos = raw; hasMoved = false; longPressTriggered = false; isPanning = false;
             if (e.target.id === 'canvas' && e.cancelable) e.preventDefault();
             if (!isClosed) { saveState(); const world = s2w(raw); const snapped = {x: Math.round(world.x), y: Math.round(world.y)}; if (points.length >= 3 && Math.hypot(raw.x - w2s(points[0]).x, raw.y - w2s(points[0]).y) < 50) { finalizeDrawing(); } else { points.push(snapped); draw(); } return; }
             for (let i = 0; i < points.length; i++) { 
@@ -414,9 +413,22 @@
                 return;
             }
             for (let i = 0; i < points.length; i++) { if (distToSegment(raw, w2s(points[i]), w2s(points[(i+1)%points.length])) < 25) { targetEdgeIdx = i; return; } }
+            // どこにもヒットしなければパン（移動）開始
+            isPanning = true;
         }
 
-        function handleMove(e) { if (Math.hypot(getRawCoords(e).x - startRawPos.x, getRawCoords(e).y - startRawPos.y) > 10) { hasMoved = true; if (pressTimer) { clearInterval(pressTimer); pressTimer = null; pressProgress.style.opacity = '0'; } } }
+        function handleMove(e) {
+            const raw = getRawCoords(e);
+            if (Math.hypot(raw.x - startRawPos.x, raw.y - startRawPos.y) > 10) {
+                hasMoved = true; if (pressTimer) { clearInterval(pressTimer); pressTimer = null; pressProgress.style.opacity = '0'; }
+            }
+            // ★移動（パン）処理
+            if (isPanning) {
+                cameraX += raw.x - lastRawPos.x; cameraY += raw.y - lastRawPos.y;
+                lastRawPos = raw; draw();
+            }
+        }
+
         function handleEnd() {
             if (pressTimer) { clearInterval(pressTimer); pressTimer = null; }
             pressProgress.style.opacity = '0'; setTimeout(() => { if (!pressTimer) pressProgress.style.width = '0'; }, 200);
@@ -424,7 +436,7 @@
                 if (longPressTriggered && targetVertexIdx !== null) { activeMode = 'angle'; selectedIdx = targetVertexIdx; openModal(); } 
                 else if (targetEdgeIdx !== null) { activeMode = 'edge'; selectedIdx = targetEdgeIdx; openModal(); }
             }
-            targetVertexIdx = null; targetEdgeIdx = null; draw();
+            targetVertexIdx = null; targetEdgeIdx = null; isPanning = false; draw();
         }
 
         function finalizeDrawing() { saveState(); isClosed = true; globalBaseAngle = Math.atan2(points[1].y - points[0].y, points[1].x - points[0].x); let s = 0; for(let i = 0; i < points.length; i++) s += points[i].x * points[(i+1)%points.length].y - points[(i+1)%points.length].x * points[i].y; globalIsCW = s > 0; draw(); }
@@ -441,6 +453,7 @@
             let val = activeMode === 'edge' ? manualLengths[selectedIdx] : fixedAngles[selectedIdx];
             if (!val && activeMode === 'edge') val = (Math.hypot(points[(selectedIdx+1)%points.length].x-points[selectedIdx].x, points[(selectedIdx+1)%points.length].y-points[selectedIdx].y)/ppx).toFixed(2);
             else if (!val && isClosed && activeMode === 'angle') val = getA(selectedIdx);
+            
             const edgeInfo = document.getElementById('edgeInfo'); let showEdgeInfo = false;
             if (activeMode === 'edge' && isClosed) {
                 const p1 = points[selectedIdx], p2 = points[(selectedIdx+1)%points.length], dx = p2.x-p1.x, dy = p2.y-p1.y, cos = Math.cos(-globalBaseAngle), sin = Math.sin(-globalBaseAngle), ldx = dx*cos-dy*sin, ldy = dx*sin+dy*cos;
@@ -461,21 +474,17 @@
             slopeInput.oninput = () => { const val = parseFloat(slopeInput.value); if (!isNaN(val)) { const deg = Math.atan(val / 100) * 180 / Math.PI; slopeResult.innerText = deg.toFixed(1) + '°'; } else { slopeResult.innerText = '0.0°'; } };
             document.querySelectorAll('.numpad-btn').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); const val = btn.getAttribute('data-val'); if (isFirstInput) { currentInputValue = val; isFirstInput = false; } else { if (val === '.' && currentInputValue.includes('.')) return; if (currentInputValue === '0' && val !== '.') currentInputValue = val; else currentInputValue += val; } updateModalDisplay(); }; });
             document.getElementById('numpadBS').onclick = (e) => { e.stopPropagation(); if (isFirstInput) { currentInputValue = ""; isFirstInput = false; } else { currentInputValue = currentInputValue.slice(0, -1); } updateModalDisplay(); };
-            document.getElementById('saveBtn').onclick = (e) => {
-                e.stopPropagation(); saveState(); const val = parseFloat(currentInputValue);
-                if (activeMode === 'edge') { if (!isNaN(val) && val > 0) manualLengths[selectedIdx] = val; else delete manualLengths[selectedIdx]; } 
-                else { if (!isNaN(val) && val >= 0) fixedAngles[selectedIdx] = val; else delete fixedAngles[selectedIdx]; }
-                inputModal.classList.remove('active'); draw(); // ★図形は更新せず描画のみ
-            };
+            document.getElementById('saveBtn').onclick = (e) => { e.stopPropagation(); saveState(); const val = parseFloat(currentInputValue); if (activeMode === 'edge') { if (!isNaN(val) && val > 0) manualLengths[selectedIdx] = val; else delete manualLengths[selectedIdx]; } else { if (!isNaN(val) && val >= 0) fixedAngles[selectedIdx] = val; else delete fixedAngles[selectedIdx]; } inputModal.classList.remove('active'); draw(); };
             document.getElementById('cancelModal').onclick = (e) => { e.stopPropagation(); inputModal.classList.remove('active'); draw(); };
-            exportBtn.onclick = () => { if (points.length < 3 || !isClosed) { showToast("図形を閉じてから保存してください"); return; } const dataUrl = canvas.toDataURL("image/png"); savedData.push({ img: dataUrl, area: areaEl.innerText, time: new Date().toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), memo: '', points: JSON.parse(JSON.stringify(points)), manualLengths: {...manualLengths}, fixedAngles: {...fixedAngles}, isClosed, ppx, globalBaseAngle, globalIsCW, updateCount, slopeValue: slopeInput.value, cameraX, cameraY, zoom }); persistData(); showToast("保存しました"); };
-            document.getElementById('undoBtn').onclick = undo; document.getElementById('fitBtn').onclick = () => { rebuildGeometry(true); draw(); };
-            document.getElementById('resetBtn').onclick = () => { saveState(); points = []; manualLengths = {}; fixedAngles = {}; isClosed = false; updateCount = 0; cameraX=0; cameraY=0; zoom=1; slopeInput.value=""; slopeInput.oninput(); areaEl.innerText="--.--"; draw(); };
+            exportBtn.onclick = () => { if (points.length < 3 || !isClosed) { showToast("図形を閉じてから保存してください"); return; } const dataUrl = canvas.toDataURL("image/png"); savedData.push({ img: dataUrl, area: areaEl.innerText, time: new Date().toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), memo: '', points: JSON.parse(JSON.stringify(points)), manualLengths: {...manualLengths}, fixedAngles: {...fixedAngles}, isClosed, ppx, globalBaseAngle, globalIsCW, slopeValue: slopeInput.value, cameraX, cameraY, zoom }); persistData(); showToast("保存しました"); };
+            document.getElementById('undoBtn').onclick = undo;
+            // ★全体ボタン
+            document.getElementById('fitBtn').onclick = fitView;
+            document.getElementById('resetBtn').onclick = () => { saveState(); points = []; manualLengths = {}; fixedAngles = {}; isClosed = false; cameraX=0; cameraY=0; zoom=1; slopeInput.value=""; slopeInput.oninput(); areaEl.innerText="--.--"; draw(); };
             document.getElementById('setQuick90').onclick = () => { currentInputValue = "90"; isFirstInput = false; updateModalDisplay(); document.getElementById('saveBtn').click(); };
             document.getElementById('setQuick270').onclick = () => { currentInputValue = "270"; isFirstInput = false; updateModalDisplay(); document.getElementById('saveBtn').click(); };
             document.getElementById('setQuick45').onclick = () => { currentInputValue = "45"; isFirstInput = false; updateModalDisplay(); document.getElementById('saveBtn').click(); };
             
-            // ★作図 更新ボタンでのみ図形を整え、面積を計算する
             document.getElementById('executeBtn').onclick = () => {
                 if (!isClosed) { showToast("図形を閉じてから実行してください"); return; }
                 saveState(); const N = points.length;
@@ -491,31 +500,38 @@
                         if (Math.abs(actualDeg - 90) <= 15) fixedAngles[i] = 90; else if (Math.abs(actualDeg - 270) <= 15) fixedAngles[i] = 270; else fixedAngles[i] = Math.round(actualDeg * 10) / 10;
                     }
                 }
-                updateCount++; rebuildGeometry(false); draw(); showToast("面積を確定しました");
+                rebuildGeometry(); draw(); showToast("面積を確定しました");
             };
-            canvas.addEventListener('mousedown', (e) => { handleStart(e); });
-            window.addEventListener('mousemove', (e) => { handleMove(e); });
-            window.addEventListener('mouseup', (e) => { handleEnd(); });
+
+            let isTouching = false;
+            canvas.addEventListener('mousedown', (e) => { if (isTouching) return; handleStart(e); });
+            window.addEventListener('mousemove', (e) => { if (isTouching) return; handleMove(e); });
+            window.addEventListener('mouseup', (e) => { if (isTouching) return; handleEnd(); });
+
             canvas.addEventListener('touchstart', (e) => { 
+                isTouching = true; 
                 if (e.touches.length === 2) { 
+                    isPanning = false; targetVertexIdx = null; targetEdgeIdx = null;
                     initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); 
-                    initialZoom = zoom; initialPinchCenter = { x: (e.touches[0].clientX+e.touches[1].clientX)/2, y: (e.touches[0].clientY+e.touches[1].clientY)/2 }; 
+                    initialZoom = zoom;
+                    const r = canvas.getBoundingClientRect(); initialPinchCenter = { x: (e.touches[0].clientX+e.touches[1].clientX)/2 - r.left, y: (e.touches[0].clientY+e.touches[1].clientY)/2 - r.top }; 
                     if (e.cancelable) e.preventDefault(); return; 
                 }
                 handleStart(e); 
             }, {passive:false});
             window.addEventListener('touchmove', (e) => { 
-                if (e.touches.length === 2 && initialPinchDist) { 
+                if (isTouching && e.touches.length === 2 && initialPinchDist) { 
                     const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY), nz = Math.max(0.1, Math.min(10, initialZoom * (d / initialPinchDist))), r = nz / zoom;
                     cameraX = initialPinchCenter.x - (initialPinchCenter.x - cameraX) * r; cameraY = initialPinchCenter.y - (initialPinchCenter.y - cameraY) * r; zoom = nz; draw(); if (e.cancelable) e.preventDefault(); return; 
                 }
                 handleMove(e); 
             }, {passive:false});
-            window.addEventListener('touchend', (e) => { handleEnd(); });
+            window.addEventListener('touchend', (e) => { handleEnd(); isTouching = false; });
             window.addEventListener('resize', resize); resize(); setTimeout(resize, 200);
         };
+
         function switchTab(tab) { document.querySelectorAll('.tab-view').forEach(v => v.style.display = 'none'); document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active')); if (tab === 'draw') { document.getElementById('drawView').style.display = 'flex'; document.getElementById('tabDraw').classList.add('active'); resize(); } else { document.getElementById('historyView').style.display = 'block'; document.getElementById('tabHistory').classList.add('active'); renderHistory(); } }
-        function loadHistory(idx) { const data = savedData[idx]; if (!data || !data.points) { showToast("復元用データがありません"); return; } saveState(); points = JSON.parse(JSON.stringify(data.points)); manualLengths = {...data.manualLengths}; fixedAngles = {...data.fixedAngles}; isClosed = data.isClosed; ppx = data.ppx; globalBaseAngle = data.globalBaseAngle; globalIsCW = data.globalIsCW; updateCount = data.updateCount || 0; slopeInput.value = data.slopeValue || ""; cameraX = data.cameraX || 0; cameraY = data.cameraY || 0; zoom = data.zoom || 1.0; slopeInput.oninput(); switchTab('draw'); draw(); showToast("データを読み込みました"); }
+        function loadHistory(idx) { const data = savedData[idx]; if (!data || !data.points) { showToast("復元用データがありません"); return; } saveState(); points = JSON.parse(JSON.stringify(data.points)); manualLengths = {...data.manualLengths}; fixedAngles = {...data.fixedAngles}; isClosed = data.isClosed; ppx = data.ppx; globalBaseAngle = data.globalBaseAngle; globalIsCW = data.globalIsCW; slopeInput.value = data.slopeValue || ""; cameraX = data.cameraX || 0; cameraY = data.cameraY || 0; zoom = data.zoom || 1.0; slopeInput.oninput(); switchTab('draw'); draw(); showToast("データを読み込みました"); }
         function renderHistory() { const list = document.getElementById('historyList'); if (savedData.length === 0) { list.innerHTML = `<div class="text-center text-[#8E8E93] py-20 font-bold">まだ保存されたデータはありません</div>`; return; } list.innerHTML = savedData.slice().reverse().map((data, idx) => { const actualIdx = savedData.length - 1 - idx; return `<div class="history-card"><input type="text" class="memo-input" placeholder="メモを入力..." value="${data.memo || ''}" onchange="updateMemo(${actualIdx}, this.value)"><div class="flex justify-between items-center mb-2 px-1"><span class="text-[#8E8E93] text-xs font-bold">${data.time}</span><span class="text-white font-black text-lg">${data.area} m²</span></div><div onclick="loadHistory(${actualIdx})" class="active:opacity-70 transition-opacity"><img src="${data.img}" class="w-full rounded-xl border border-white/10 mb-3 bg-[#000]"><div class="text-center text-[11px] text-[#5E5CE6] font-bold mb-2 uppercase tracking-widest">タップで編集を再開</div></div><div class="flex gap-2"><button onclick="deleteHistory(${actualIdx})" class="flex-1 py-3 bg-[#2C2C2E] text-[#FF453A] rounded-xl font-bold text-sm btn-tap">削除</button></div></div>`; }).join(''); }
         function updateMemo(idx, val) { savedData[idx].memo = val; persistData(); showToast("メモを保存しました"); }
         function deleteHistory(idx) { if(confirm("このデータを削除してもよろしいですか？")) { savedData.splice(idx, 1); persistData(); renderHistory(); showToast("削除しました"); } }
