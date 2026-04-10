@@ -1,55 +1,62 @@
-const CACHE_NAME = 'area-calc-pc-ipad-pwa-v20260405-01';
-const APP_SHELL = [
+const CACHE_VERSION = 'ipad-touchfix1';
+const CORE_CACHE = `area-calc-${CACHE_VERSION}`;
+const CORE_ASSETS = [
   './',
-  './index.html',
-  './manifest.json',
-  './icon-180.png',
-  './icon-192.png',
-  './icon-512.png'
+  './index.html?v=ipad-touchfix1',
+  './manifest.json?v=ipad-touchfix1'
 ];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
+    caches.open(CORE_CACHE).then((cache) => cache.addAll(CORE_ASSETS))
   );
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((key) => key !== CACHE_NAME)
-          .map((key) => caches.delete(key))
-      )
-    ).then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((key) => key !== CORE_CACHE).map((key) => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
+  const req = event.request;
+  const url = new URL(req.url);
 
-  const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin) return;
+  // Cross-origin libraries are left to the network.
+  if (url.origin !== self.location.origin) {
+    return;
+  }
 
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (response && response.status === 200) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
-        }
-        return response;
-      })
-      .catch(async () => {
-        const cached = await caches.match(event.request, { ignoreSearch: true });
-        if (cached) return cached;
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-        throw new Error('Network error and no cached response available.');
-      })
-  );
+  // HTML navigation: network first, cached fallback.
+  if (req.mode === 'navigate') {
+    event.respondWith((async () => {
+      try {
+        const network = await fetch(req, { cache: 'no-store' });
+        const cache = await caches.open(CORE_CACHE);
+        cache.put('./index.html?v=ipad-touchfix1', network.clone());
+        return network;
+      } catch (err) {
+        return (await caches.match('./index.html?v=ipad-touchfix1')) || Response.error();
+      }
+    })());
+    return;
+  }
+
+  // Same-origin static files: stale-while-revalidate.
+  event.respondWith((async () => {
+    const cached = await caches.match(req, { ignoreSearch: false }) ||
+                   await caches.match(url.pathname, { ignoreSearch: true });
+    const fetchPromise = fetch(req).then(async (network) => {
+      if (req.method === 'GET' && network && network.ok) {
+        const cache = await caches.open(CORE_CACHE);
+        cache.put(req, network.clone());
+      }
+      return network;
+    }).catch(() => cached);
+
+    return cached || fetchPromise || Response.error();
+  })());
 });

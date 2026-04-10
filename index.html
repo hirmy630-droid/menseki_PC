@@ -725,9 +725,95 @@
                         if (hitType === 'vertex') { s.activeMode = 'angle'; s.selectedIdx = hitIdx; selectInputTarget('angle'); } else if (hitType === 'edge' || hitType === 'label') { s.activeMode = 'edge'; s.selectedIdx = hitIdx; selectInputTarget('edge'); }
                     }
                 };
-                const onTouchStart = (e) => { if (e.touches.length === 2) { s.isPanning = false; s.isInteractingWithCanvas = true; s.initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); s.initialZoom = s.zoom; const r = canvas.getBoundingClientRect(); s.initialPinchCenter = { x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left, y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top }; if (e.cancelable) e.preventDefault(); return; } onStart(e); };
-                const onTouchMove = (e) => { if (s.isInteractingWithCanvas && e.touches.length === 2 && s.initialPinchDist) { const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY), nz = Math.max(0.1, Math.min(10, s.initialZoom * (d / s.initialPinchDist))), r = nz / s.zoom; s.cameraX = s.initialPinchCenter.x - (s.initialPinchCenter.x - s.cameraX) * r; s.cameraY = s.initialPinchCenter.y - (s.cameraY) * r; s.zoom = nz; draw(); if (e.cancelable) e.preventDefault(); return; } onMove(e); };
-                const onTouchEnd = () => { s.initialPinchDist = null; onEnd(); };
+                const onTouchStart = (e) => {
+                    if (e.touches.length === 2) {
+                        s.isPanning = false;
+                        s.isInteractingWithCanvas = true;
+                        s.isPinching = true;
+                        s.hasMoved = true;
+                        s.initialPinchDist = Math.hypot(
+                            e.touches[0].clientX - e.touches[1].clientX,
+                            e.touches[0].clientY - e.touches[1].clientY
+                        );
+                        s.initialZoom = s.zoom;
+                        s.initialCameraX = s.cameraX;
+                        s.initialCameraY = s.cameraY;
+                        const r = canvas.getBoundingClientRect();
+                        const center = {
+                            x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left,
+                            y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top
+                        };
+                        s.initialPinchCenter = center;
+                        s.initialPinchWorld = {
+                            x: (center.x - s.initialCameraX) / s.initialZoom,
+                            y: (center.y - s.initialCameraY) / s.initialZoom
+                        };
+                        if (e.cancelable) e.preventDefault();
+                        return;
+                    }
+                    onStart(e);
+                };
+                const onTouchMove = (e) => {
+                    if (s.isInteractingWithCanvas && e.touches.length === 2 && s.initialPinchDist && s.initialPinchWorld) {
+                        const rect = canvas.getBoundingClientRect();
+                        const currentCenter = {
+                            x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left,
+                            y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top
+                        };
+                        const d = Math.hypot(
+                            e.touches[0].clientX - e.touches[1].clientX,
+                            e.touches[0].clientY - e.touches[1].clientY
+                        );
+                        const nz = Math.max(0.1, Math.min(10, s.initialZoom * (d / s.initialPinchDist)));
+                        s.zoom = nz;
+                        s.cameraX = currentCenter.x - s.initialPinchWorld.x * nz;
+                        s.cameraY = currentCenter.y - s.initialPinchWorld.y * nz;
+                        s.hasMoved = true;
+                        if (!s.pinchRaf) {
+                            s.pinchRaf = requestAnimationFrame(() => {
+                                s.pinchRaf = 0;
+                                draw();
+                            });
+                        }
+                        if (e.cancelable) e.preventDefault();
+                        return;
+                    }
+                    onMove(e);
+                };
+                const onTouchEnd = (e) => {
+                    if (s.pinchRaf) {
+                        cancelAnimationFrame(s.pinchRaf);
+                        s.pinchRaf = 0;
+                    }
+                    const remainingTouches = e && e.touches ? e.touches.length : 0;
+                    if (s.isPinching) {
+                        if (remainingTouches >= 2) return;
+                        s.initialPinchDist = null;
+                        s.initialPinchCenter = null;
+                        s.initialPinchWorld = null;
+                        s.isPinching = false;
+                        s.isInteractingWithCanvas = false;
+                        s.isPanning = false;
+                        s.hasMoved = true;
+                        return;
+                    }
+                    s.initialPinchDist = null;
+                    s.initialPinchCenter = null;
+                    s.initialPinchWorld = null;
+                    onEnd();
+                };
+                const onTouchCancel = () => {
+                    if (s.pinchRaf) {
+                        cancelAnimationFrame(s.pinchRaf);
+                        s.pinchRaf = 0;
+                    }
+                    s.initialPinchDist = null;
+                    s.initialPinchCenter = null;
+                    s.initialPinchWorld = null;
+                    s.isPinching = false;
+                    s.isInteractingWithCanvas = false;
+                    s.isPanning = false;
+                };
                 
                 const handleKeyInput = (e) => {
                     const k = e.key;
@@ -744,18 +830,28 @@
                     }
                 };
 
-                canvas.addEventListener('mousedown', onStart); window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onEnd);
-                canvas.addEventListener('touchstart', onTouchStart, { passive: false }); window.addEventListener('touchmove', onTouchMove, { passive: false }); window.addEventListener('touchend', onTouchEnd);
+                canvas.addEventListener('mousedown', onStart);
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onEnd);
+                canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+                window.addEventListener('touchmove', onTouchMove, { passive: false });
+                window.addEventListener('touchend', onTouchEnd, { passive: false });
+                window.addEventListener('touchcancel', onTouchCancel, { passive: false });
                 window.addEventListener('keydown', handleKeyInput);
 
                 return () => { 
+                    if (s.pinchRaf) {
+                        cancelAnimationFrame(s.pinchRaf);
+                        s.pinchRaf = 0;
+                    }
                     window.removeEventListener('resize', handleResize); 
                     canvas.removeEventListener('mousedown', onStart); 
                     window.removeEventListener('mousemove', onMove); 
                     window.removeEventListener('mouseup', onEnd); 
                     canvas.removeEventListener('touchstart', onTouchStart); 
-                    canvas.removeEventListener('touchmove', onTouchMove); 
-                    canvas.removeEventListener('touchend', onTouchEnd);
+                    window.removeEventListener('touchmove', onTouchMove); 
+                    window.removeEventListener('touchend', onTouchEnd);
+                    window.removeEventListener('touchcancel', onTouchCancel);
                     window.removeEventListener('keydown', handleKeyInput);
                 };
             }, [draw, s, activeTab, activeInputTarget, slopeActiveField, slopeIsNewEntry]);
@@ -1016,9 +1112,10 @@
             const areaStateRef = useRef({
                 points: [], manualLengths: {}, fixedAngles: {}, isClosed: false, selectedIdx: -1, activeMode: 'edge', ppx: 60,
                 actionHistory: [], cameraX: 0, cameraY: 0, zoom: 1.0, isPanning: false, lastRawPos: {x: 0, y: 0}, startRawPos: {x: 0, y: 0}, hasMoved: false,
-                globalBaseAngle: 0, globalIsCW: true, initialPinchDist: null, initialZoom: 1, initialPinchCenter: null, updateCount: 0,
+                globalBaseAngle: 0, globalIsCW: true, initialPinchDist: null, initialZoom: 1, initialPinchCenter: null, initialCameraX: 0, initialCameraY: 0,
+                initialPinchWorld: null, isPinching: false, pinchRaf: 0, updateCount: 0,
             });
-            const [areaSavedData, setAreaSavedData] = useState(() => getStored('area_calc_data_v20_ipad', []));
+            const [areaSavedData, setAreaSavedData] = useState(() => getStored('area_calc_data_v21_ipad', []));
 
             return (
                 <div className="flex flex-col bg-black min-h-screen">
