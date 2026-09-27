@@ -3,1153 +3,1694 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>面積計算</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React & ReactDOM -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <!-- Babel for JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- html2canvas -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700;900&display=swap');
-        
-        :root {
-            --ios-bg: #000000;
-            --ios-secondary-bg: #1c1c1e;
-            --ios-tertiary-bg: #000000; 
-            --ios-quaternary-bg: #000000; 
-            --ios-blue: #0a84ff;
-            --ios-green: #30d158;
-            --ios-orange: #f97316;
-            --ios-purple: #bf5af2;
-            --ios-text: #ffffff;
-            --ios-text-secondary: #d1d1d6; /* 明るいシルバー */
-            --ios-separator: #71717a;
-            --safe-top: env(safe-area-inset-top);
-            --safe-bottom: env(safe-area-inset-bottom);
-        }
-
-        body { 
-            font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif; 
-            -webkit-tap-highlight-color: transparent; 
-            background-color: var(--ios-bg); 
-            font-size: 15px; 
-            color: var(--ios-text); 
-            min-height: 100vh;
-            overscroll-behavior: none;
-            font-variant-ligatures: none;
-        }
-
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type=number] { -moz-appearance: textfield; }
-
-        input::placeholder {
-            font-size: 14px !important; /* 最低フォントサイズ14px */
-            color: #a1a1aa !important; /* 明るいシルバー */
-            font-weight: 400;
-        }
-        
-        .btn-3d { 
-            transition: all 0.1s; 
-            position: relative; 
-            top: 0; 
-            border-radius: 12px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            text-align: center;
-            font-weight: 700;
-            border-bottom-width: 4px;
-        }
-        .btn-3d:active { transform: translateY(2px); border-bottom-width: 0 !important; }
-        
-        .btn-3d-orange { background-color: var(--ios-orange) !important; border-bottom-color: #9a3412 !important; }
-        .btn-3d-blue { background-color: var(--ios-blue) !important; border-bottom-color: #005bb5 !important; }
-        .btn-3d-zinc { background: #3f3f46; border-bottom-color: #18181b; }
-        .btn-3d-silver { background: #d4d4d8; border-bottom-color: #71717a; color: #444; }
-        .btn-3d-red { background: #dc2626; border-bottom-color: #7f1d1d; }
-        .btn-3d-gray { background: #8e8e93; border-bottom-color: #636366; }
-        .btn-3d-darkgray { background: #52525b; border-bottom-color: #3f3f46; }
-        .btn-3d-indigo { background-color: #5E5CE6 !important; border-bottom-color: #3A38B1 !important; }
-        
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-        .animate-fade-in { animation: fadeIn 0.15s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-        .ios-card-base { background: #1c1c1e; border-radius: 18px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); border: 1px solid #3a3a3c; }
-
-        .canvas-container { border: 1px solid #38383a; border-radius: 12px; overflow: hidden; background-color: #000000; width: 100%; position: relative; }
-        canvas { width: 100%; height: auto; display: block; }
-
-        .alloc-input-field {
-            background-color: #2c2c2e;
-            border: 1px solid var(--ios-separator) !important;
-            color: var(--ios-text);
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            width: 100%; 
-            padding: 0.4rem 1rem; 
-            font-size: 1.25rem; 
-            text-align: center; 
-            height: 2.8rem; 
-            border-radius: 12px;
-        }
-        
-        .toast-msg {
-            position: fixed; top: 110px; left: 50%; transform: translateX(-50%);
-            background: rgba(255,255,255,0.95); color: #000; padding: 14px 24px;
-            border-radius: 999px; font-size: 16px; font-weight: 700;
-            box-shadow: 0 10px 24px rgba(0,0,0,0.35); white-space: nowrap; z-index: 1000;
-            pointer-events: none; transition: opacity 0.3s ease;
-        }
-
-        input[type="checkbox"].ios-checkbox {
-            -webkit-appearance: none; appearance: none; background-color: #000; margin: 0; font: inherit; color: #5E5CE6; width: 1.5rem; height: 1.5rem; border: 2px solid var(--ios-separator); border-radius: 0.5rem; display: grid; place-content: center; cursor: pointer; transition: all 0.2s;
-        }
-        input[type="checkbox"].ios-checkbox:checked { background-color: #5E5CE6; border-color: #5E5CE6; }
-        input[type="checkbox"].ios-checkbox::before { content: ""; width: 0.75rem; height: 0.75rem; transform: scale(0); transition: 120ms transform ease-in-out; box-shadow: inset 1em 1em white; clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%); }
-        input[type="checkbox"].ios-checkbox:checked::before { transform: scale(1); }
-
-        /* Slope Tab Styles */
-        .label-ios-slope {
-            position: absolute;
-            left: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-weight: bold;
-            color: #d1d1d6; /* 明るいシルバー */
-            pointer-events: none;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-    </style>
-
-    <meta name="theme-color" content="#0b0b0f">
-    <meta name="description" content="面積計算 PWA">
+    <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="面積計算">
-    <meta name="mobile-web-app-capable" content="yes">
-<link rel="manifest" href="./manifest.json">
-<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
-<link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png">
-<meta name="application-name" content="面積計算">
+    <meta name="format-detection" content="telephone=no">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" type="image/png" href="./icon-192.png">
+    <link rel="apple-touch-icon" href="./icon-180.png">
+    <title>面積計算 - iPad Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-left: env(safe-area-inset-left, 0px);
+            --safe-right: env(safe-area-inset-right, 0px);
+            --app-height: 100vh;
+        }
 
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overscroll-behavior: none;
+            -webkit-text-size-adjust: 100%;
+            background-color: #000000;
+        }
+
+        body { 
+            background-color: #000000; 
+            color: #FFFFFF;
+            min-height: var(--app-height);
+            height: var(--app-height); 
+            font-size: 16px; 
+            -webkit-tap-highlight-color: transparent;
+            overflow: hidden;
+            position: relative;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            touch-action: manipulation;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+        }
+        
+        canvas { 
+            touch-action: none; 
+            display: block; 
+            width: 100%; 
+            height: 100%;
+            min-height: 0; 
+            cursor: crosshair;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            width: 100%;
+            height: var(--app-height);
+            min-height: 0;
+            padding-left: var(--safe-left);
+            padding-right: var(--safe-right);
+        }
+
+        .app-top-header {
+            background: #1C1C1E;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: calc(var(--safe-top) + 10px) 24px 10px 24px;
+            flex-shrink: 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .tab-bar { 
+            background: #1C1C1E; 
+            display: flex; 
+            padding: 6px 20px 10px 20px; 
+            gap: 10px; 
+            flex-shrink: 0;
+            border-bottom: 1px solid #2C2C2E;
+        }
+
+        .tab-item { 
+            flex: 1; 
+            padding: 10px; 
+            text-align: center; 
+            font-weight: 800; 
+            border-radius: 12px; 
+            color: #8E8E93; 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+            font-size: 15px;
+            background: #2C2C2E;
+            cursor: pointer;
+            user-select: none;
+        }
+        .tab-item.active { 
+            background: #3A3A3C; 
+            color: #FFFFFF; 
+            box-shadow: 0 0 0 2px #FF9500;
+        }
+
+        header { background: #1C1C1E; flex-shrink: 0; }
+        
+        .modal { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0, 0, 0, 0.82); 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 200; 
+            backdrop-filter: blur(14px); 
+            -webkit-backdrop-filter: blur(14px);
+            padding: 20px;
+        }
+        .modal.active { display: flex; }
+        
+        .btn-tap { 
+            transition: transform 0.12s ease, opacity 0.12s ease; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            border: none; 
+            user-select: none;
+        }
+        .btn-tap:active { transform: scale(0.96); opacity: 0.85; }
+        
+        .header-btn { 
+            height: 40px; 
+            padding: 0 16px; 
+            border-radius: 11px; 
+            font-size: 14px; 
+            font-weight: 800;
+        }
+
+        input[type="text"] {
+            appearance: none;
+            background: #2C2C2E;
+            color: #FFFFFF;
+            border: 1px solid #3A3A3C;
+            font-size: 16px;
+        }
+        
+        #slopeView input[type="text"] {
+            background-color: transparent !important;
+            border: none !important;
+            appearance: none !important;
+            box-shadow: none !important;
+        }
+        #slope_val_y, #slope_val_x { font-size: 24px !important; }
+        #slope_val_c { font-size: 30px !important; }
+        #slope_val_a, #slope_val_b { font-size: 30px !important; }
+
+        .canvas-area { 
+            flex: 1; 
+            position: relative; 
+            background: #1C1C1E; 
+            overflow: hidden;
+            min-height: 0; 
+        }
+
+        #gridBg {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(#FFFFFF 1.2px, transparent 1.2px);
+            background-size: 22.4px 22.4px; 
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        #pressProgress { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            height: 4px; 
+            background: #5E5CE6; 
+            z-index: 300; 
+            width: 0; 
+            opacity: 0; 
+            transition: opacity 0.2s; 
+            pointer-events: none; 
+        }
+
+        #historyView { 
+            overflow-y: auto; 
+            background: #000; 
+            padding: 20px; 
+            -webkit-overflow-scrolling: touch;
+        }
+        .history-card { 
+            background: #1C1C1E; 
+            border-radius: 20px; 
+            padding: 16px; 
+            border: 1px solid #2C2C2E; 
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+        .memo-input { 
+            width: 100%; 
+            background: transparent; 
+            border: none; 
+            color: #8E8E93; 
+            font-size: 15px; 
+            margin-bottom: 10px; 
+            font-weight: bold; 
+        }
+
+        .bg-system-indigo { background-color: #5E5CE6; }
+        .bg-system-gray { background-color: #2C2C2E; color: #FFFFFF; }
+        .bg-system-red { background-color: #FF453A; color: #FFFFFF; }
+        .bg-system-orange { background-color: #FF9500; color: #FFFFFF; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+        #slopeView input::placeholder { 
+            font-size: 16px !important; 
+            font-weight: 500; 
+            color: #71717a !important;
+            opacity: 1;
+        }
+        #slopeView .placeholder-silver::placeholder {
+            color: #c0c0c0 !important;
+        }
+        .btn-3d-silver-ios {
+            background: linear-gradient(180deg, #f2f2f7 0%, #d1d1d6 100%);
+            border: 1px solid #8e8e93;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.7);
+            transition: all 0.05s ease;
+            position: relative;
+            z-index: 1;
+        }
+        .btn-3d-silver-ios:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 4px rgba(0,0,0,0.3);
+        }
+        
+        .label-ios {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 15px;
+            font-weight: bold;
+            color: #c0c0c0;
+            pointer-events: none;
+            z-index: 10;
+            white-space: nowrap;
+        }
+
+        #nativeInput {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 46px;
+            font-weight: 900;
+            width: 100%;
+            text-align: center;
+            outline: none;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+    </style>
 </head>
-<body class="bg-black">
-    <div id="root"></div>
+<body class="font-sans antialiased selection:bg-indigo-500 selection:text-white">
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+    <div id="pressProgress"></div>
+    <div id="toast" class="fixed top-24 left-1/2 -translate-x-1/2 bg-white/95 text-black px-8 py-3.5 rounded-full text-base font-bold opacity-0 pointer-events-none transition-opacity duration-300 z-[250] shadow-2xl whitespace-nowrap border border-white/20"></div>
 
-        const getStored = (key, fallback) => {
-            const item = localStorage.getItem(key);
-            try { return item ? JSON.parse(item) : fallback; } catch(e) { return fallback; }
-        };
+    <div class="app-container">
+        <!-- トップヘッダー -->
+        <div class="app-top-header">
+            <div class="flex items-center gap-3">
+                <span class="text-[22px] font-black tracking-tight text-white">面積計算</span>
+                <span class="text-xs px-2.5 py-0.5 rounded-md bg-zinc-800 text-zinc-400 font-bold border border-zinc-700">iPad Edition</span>
+            </div>
+            <span class="text-[14px] font-black text-zinc-500 tracking-wider">KYOWA ROOF</span>
+        </div>
 
-        const Icon = ({ name, size = 24, className = "" }) => {
-            const paths = {
-                undo: <path d="M3 7v6h6M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
-                rotate: <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8M3 3v5h5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
-                trash: <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
-                x: <path d="M18 6 6 18M6 6l12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
-                plus: <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />,
-                chevron: <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
-                backspace: <path d="M21 4H8l-7 8 7 8h13a2 2 0 002-2V6a2 2 0 00-2-2zM18 9l-6 6M12 9l6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
-                enter: <path d="M9 10l-5 5 5 5M4 15h11a5 5 0 0 0 5-5V7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            };
-            return (
-                <svg width={size} height={size} viewBox="0 0 24 24" className={className} xmlns="http://www.w3.org/2000/svg">
-                    {paths[name] || null}
-                </svg>
-            );
-        };
+        <!-- タブバー (iPad向けにゆったりとした幅) -->
+        <div class="tab-bar">
+            <div class="flex w-full max-w-4xl mx-auto gap-3">
+                <div id="tabDraw" class="tab-item active" onclick="switchTab('draw')">作図</div>
+                <div id="tabHistory" class="tab-item" onclick="switchTab('history')">保存済み図面</div>
+                <div id="tabSlope" class="tab-item" onclick="switchTab('slope')">勾配計算</div>
+            </div>
+        </div>
 
-        const AreaApp = ({ areaStateRef, savedData, setAreaSavedData, showToast }) => {
-            const canvasRef = useRef(null);
-            const containerRef = useRef(null);
-            const [areaValue, setAreaValue] = useState('--.--');
-            const [modalValue, setModalValue] = useState('');
-            const [isFirstInput, setIsFirstInput] = useState(true);
-            const [slopeInput, setSlopeInput] = useState(''); // 初期値を40から未入力に変更
-            const [slopeDeg, setSlopeDeg] = useState('0.0°'); // 初期値を角度変更
-            const [baseInput, setBaseInput] = useState(''); 
-            const [hypotenuseValue, setHypotenuseValue] = useState('-'); 
-            const [activeInputTarget, setActiveInputTarget] = useState('slope'); 
-            const [activeTab, setActiveTab] = useState('draw'); 
-            const [updateTrigger, setUpdateTrigger] = useState(0);
-
-            // Slope Tab States
-            const [slopeY, setSlopeY] = useState('');
-            const [slopeX, setSlopeX] = useState('');
-            const [slopeC, setSlopeC] = useState('');
-            const [slopeA, setSlopeA] = useState('');
-            const [slopeB, setSlopeB] = useState('');
-            const [slopeActiveField, setSlopeActiveField] = useState('y');
-            const [slopeIsNewEntry, setSlopeIsNewEntry] = useState(true);
+        <!-- メインビュー領域 -->
+        <div class="flex-1 flex flex-col overflow-hidden relative">
             
-            const s = areaStateRef.current;
-            const themeColor = activeInputTarget === 'angle' ? '#30d158' : '#5E5CE6';
-
-            const historyTotals = useMemo(() => {
-                let checkedTotal = 0;
-                let grandTotal = 0;
-                savedData.forEach(item => {
-                    const val = parseFloat(item.area) || 0;
-                    grandTotal += val;
-                    if (item.checked) checkedTotal += val;
-                });
-                return { checked: checkedTotal.toFixed(2), all: grandTotal.toFixed(2) };
-            }, [savedData]);
-
-            // Helper functions for slope
-            const unformat = (val) => val.toString().replace(/,/g, '');
-            const toNum = (val) => parseFloat(unformat(val)) || 0;
-            const formatNum = (val) => {
-                if (val === '' || val === undefined || val === null) return '';
-                const clean = val.toString().replace(/,/g, '');
-                const num = parseFloat(clean);
-                return isNaN(num) ? val : Math.round(num).toLocaleString();
-            };
-            const formatSlopeValue = (num) => {
-                if (num === '' || num === null || num === undefined || Number.isNaN(num)) return '';
-                return Math.round(num).toString();
-            };
-            const formatAngleValue = (num) => {
-                if (num === '' || num === null || num === undefined || Number.isNaN(num)) return '';
-                return (Math.round(num * 10) / 10).toFixed(1);
-            };
-
-            const handleSlopeCalcChange = (field, val) => {
-                const cleanVal = unformat(val);
-                if (field === 'y') {
-                    setSlopeY(cleanVal);
-                    const n = parseFloat(cleanVal);
-                    if (isNaN(n) || cleanVal === '') { setSlopeX(''); return; }
-                    setSlopeX(formatAngleValue((Math.atan(n / 100) * 180) / Math.PI));
-                    updateOtherSlopeFields('y', n, cleanVal, slopeX, slopeC, slopeA, slopeB);
-                } else if (field === 'x') {
-                    setSlopeX(cleanVal);
-                    const n = parseFloat(cleanVal);
-                    if (isNaN(n) || cleanVal === '') { setSlopeY(''); return; }
-                    const nY = 100 * Math.tan((n * Math.PI) / 180);
-                    setSlopeY(formatSlopeValue(nY));
-                    updateOtherSlopeFields('y', nY, formatSlopeValue(nY), cleanVal, slopeC, slopeA, slopeB);
-                } else if (field === 'c') {
-                    setSlopeC(cleanVal);
-                    const n = parseFloat(cleanVal);
-                    if (isNaN(n) || cleanVal === '') return;
-                    updateOtherSlopeFields('c', n, slopeY, slopeX, cleanVal, slopeA, slopeB);
-                } else if (field === 'a') {
-                    setSlopeA(cleanVal);
-                    const n = parseFloat(cleanVal);
-                    if (isNaN(n) || cleanVal === '') return;
-                    updateOtherSlopeFields('a', n, slopeY, slopeX, slopeC, cleanVal, slopeB);
-                } else if (field === 'b') {
-                    setSlopeB(cleanVal);
-                    const n = parseFloat(cleanVal);
-                    if (isNaN(n) || cleanVal === '') return;
-                    updateOtherSlopeFields('b', n, slopeY, slopeX, slopeC, slopeA, cleanVal);
-                }
-            };
-
-            const updateOtherSlopeFields = (changedField, changedValue, currentYStr, currentXStr, currentCStr, currentAStr, currentBStr) => {
-                const curY = changedField === 'y' ? changedValue : toNum(currentYStr);
-                const curC = changedField === 'c' ? changedValue : toNum(currentCStr);
-                const curA = changedField === 'a' ? changedValue : toNum(currentAStr);
-                const curB = changedField === 'b' ? changedValue : toNum(currentBStr);
-                const hasLockedC = (changedField === 'c') ? true : currentCStr !== '';
-
-                if (hasLockedC) {
-                    if ((changedField === 'y' || changedField === 'c') && !isNaN(curY)) {
-                        const nextA = curC * (curY / 100);
-                        const nextB = Math.sqrt(curC**2 + nextA**2);
-                        setSlopeA(Math.round(nextA).toString());
-                        setSlopeB(Math.round(nextB).toString());
-                        return;
-                    }
-                    if (changedField === 'a') {
-                        if (curC !== 0 && !isNaN(curA)) {
-                            const calcY = (curA / curC) * 100;
-                            setSlopeY(formatSlopeValue(calcY));
-                            setSlopeX(formatAngleValue((Math.atan(calcY / 100) * 180) / Math.PI));
-                            setSlopeB(Math.round(Math.sqrt(curC**2 + curA**2)).toString());
-                        } else setSlopeB('');
-                        return;
-                    }
-                    if (changedField === 'b') {
-                        if (!isNaN(curB) && curB >= curC) {
-                            const calcA = Math.sqrt(Math.max(0, curB**2 - curC**2));
-                            setSlopeA(Math.round(calcA).toString());
-                            const calcY = curC === 0 ? 0 : (calcA / curC) * 100;
-                            setSlopeY(formatSlopeValue(calcY));
-                            setSlopeX(formatAngleValue((Math.atan(calcY / 100) * 180) / Math.PI));
-                        } else { setSlopeA(''); setSlopeY(''); setSlopeX(''); }
-                        return;
-                    }
-                }
-
-                if (currentYStr !== '' || changedField === 'y') {
-                    const calcY = curY;
-                    if (changedField === 'a') {
-                        if (calcY !== 0) {
-                            const calcC = curA / (calcY / 100);
-                            setSlopeC(Math.round(calcC).toString());
-                            setSlopeB(Math.round(Math.sqrt(calcC**2 + curA**2)).toString());
-                        }
-                    } else if (changedField === 'b') {
-                        const calcC = curB / Math.sqrt(1 + (calcY / 100)**2);
-                        setSlopeC(Math.round(calcC).toString());
-                        setSlopeA(Math.round(calcC * (calcY / 100)).toString());
-                    }
-                } else if (changedField === 'a' && currentBStr !== '') {
-                    if (curB > curA) {
-                        const calcC = Math.sqrt(curB**2 - curA**2);
-                        setSlopeC(Math.round(calcC).toString());
-                        const calcY = (curA / calcC) * 100;
-                        setSlopeY(formatSlopeValue(calcY));
-                        setSlopeX(formatAngleValue((Math.atan(calcY / 100) * 180) / Math.PI));
-                    }
-                } else if (changedField === 'b' && currentAStr !== '') {
-                    if (curB > curA) {
-                        const calcC = Math.sqrt(curB**2 - curA**2);
-                        setSlopeC(Math.round(calcC).toString());
-                        const calcY = (curA / calcC) * 100;
-                        setSlopeY(formatSlopeValue(calcY));
-                        setSlopeX(formatAngleValue((Math.atan(calcY / 100) * 180) / Math.PI));
-                    }
-                }
-            };
-
-            const handleSlopeKeypad = (key) => {
-                if (key === 'AC') {
-                    setSlopeY(''); setSlopeX(''); setSlopeC(''); setSlopeA(''); setSlopeB('');
-                    setSlopeIsNewEntry(true);
-                    return;
-                }
-                if (key === 'C') {
-                    const setter = { y: setSlopeY, x: setSlopeX, c: setSlopeC, a: setSlopeA, b: setSlopeB }[slopeActiveField];
-                    if (setter) setter('');
-                    setSlopeIsNewEntry(true);
-                    return;
-                }
-                if (key === '⏎') {
-                    const fields = ['y', 'x', 'c', 'a', 'b'];
-                    const idx = fields.indexOf(slopeActiveField);
-                    setSlopeActiveField(fields[(idx + 1) % fields.length]);
-                    setSlopeIsNewEntry(true);
-                    return;
-                }
-                let currentStr = (
-                    slopeActiveField === 'y' ? slopeY :
-                    slopeActiveField === 'x' ? slopeX :
-                    slopeActiveField === 'c' ? slopeC :
-                    slopeActiveField === 'a' ? slopeA :
-                    slopeB
-                ).toString();
-                if (key === '00' && (slopeIsNewEntry || currentStr === '')) return;
-                if (key === '.' && !slopeIsNewEntry && currentStr.includes('.')) return;
-                let nextStr = slopeIsNewEntry ? (key === '.' ? '0.' : key.toString()) : currentStr + key;
-                setSlopeIsNewEntry(false);
-                handleSlopeCalcChange(slopeActiveField, nextStr);
-            };
-
-            // Drawing logic
-            const getRawCoords = (e) => {
-                if(!canvasRef.current) return {x:0, y:0};
-                const rect = canvasRef.current.getBoundingClientRect();
-                const t = (e.touches && e.touches.length > 0) ? e.touches[0] : e;
-                return { x: t.clientX - rect.left, y: t.clientY - rect.top };
-            };
-            const w2s = (w) => ({ x: w.x * s.zoom + s.cameraX, y: w.y * s.zoom + s.cameraY });
-            const s2w = (s_coord) => ({ x: (s_coord.x - s.cameraX) / s.zoom, y: (s_coord.y - s.cameraY) / s.zoom });
-            
-            const distToSegment = (p, v, w) => {
-                const l2 = Math.pow(v.x - w.x, 2) + Math.pow(v.y - w.y, 2);
-                if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
-                let t = Math.max(0, Math.min(1, ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2));
-                return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
-            };
-
-            const saveState = () => {
-                s.actionHistory.push({
-                    points: JSON.parse(JSON.stringify(s.points)), manualLengths: {...s.manualLengths}, 
-                    fixedAngles: {...s.fixedAngles}, isClosed: s.isClosed, ppx: s.ppx, 
-                    globalBaseAngle: s.globalBaseAngle, globalIsCW: s.globalIsCW, updateCount: s.updateCount
-                });
-                if (s.actionHistory.length > 50) s.actionHistory.shift();
-            };
-
-            const undo = () => {
-                if (s.actionHistory.length === 0) return;
-                const state = s.actionHistory.pop();
-                s.points = state.points; s.manualLengths = state.manualLengths; s.fixedAngles = state.fixedAngles; 
-                s.isClosed = state.isClosed; s.ppx = state.ppx; s.globalBaseAngle = state.globalBaseAngle; 
-                s.globalIsCW = state.globalIsCW; s.updateCount = state.updateCount || 0;
-                rebuildGeometry(false);
-                draw();
-            };
-
-            const getActualAngle = (idx) => {
-                const prev = s.points[(idx - 1 + s.points.length) % s.points.length];
-                const curr = s.points[idx];
-                const next = s.points[(idx + 1) % s.points.length];
-                if (!prev || !curr || !next) return 0;
-                const angIn = Math.atan2(curr.y - prev.y, curr.x - prev.x);
-                const angOut = Math.atan2(next.y - curr.y, next.x - curr.x);
-                let turn = angOut - angIn;
-                while (turn <= -Math.PI) turn += Math.PI * 2;
-                while (turn > Math.PI) turn -= Math.PI * 2;
-                let actualD = s.globalIsCW ? (180 - turn * 180 / Math.PI) : (180 + turn * 180 / Math.PI);
-                while (actualD <= 0) actualD += 360;
-                while (actualD > 360) actualD -= 360;
-                return actualD;
-            };
-
-            const rebuildGeometry = (shouldFit = false) => {
-                if (s.points.length < 3 || !s.isClosed) { setAreaValue('--.--'); return; }
-                const startAnchor = { x: s.points[0].x, y: s.points[0].y };
-                let logical = new Array(s.points.length); logical[0] = {x: 0, y: 0}; let curAngle = 0;
-                for (let i = 0; i < s.points.length - 1; i++) {
-                    let len = s.manualLengths[i] !== undefined ? s.manualLengths[i] : (Math.hypot(s.points[i+1].x - s.points[i].x, s.points[i+1].y - s.points[i].y) / s.ppx);
-                    if (len < 0.01) len = 0.01;
-                    logical[i+1] = { x: logical[i].x + len * Math.cos(curAngle), y: logical[i].y + len * Math.sin(curAngle) };
-                    if (i < s.points.length - 2) {
-                        if (s.fixedAngles[i+1] !== undefined) curAngle += (s.globalIsCW ? (180 - s.fixedAngles[i+1]) : -(180 - s.fixedAngles[i+1])) * Math.PI / 180;
-                        else {
-                            const a1 = Math.atan2(s.points[i+1].y - s.points[i].y, s.points[i+1].x - s.points[i].x);
-                            const a2 = Math.atan2(s.points[i+2].y - s.points[i+1].y, s.points[i+2].x - s.points[i+1].x);
-                            let turn = a2 - a1; while (turn < -Math.PI) turn += Math.PI * 2; while (turn > Math.PI) turn -= Math.PI * 2; curAngle += turn;
-                        }
-                    }
-                }
-                const rot = s.globalBaseAngle - Math.atan2(logical[1].y - logical[0].y, logical[1].x - logical[0].x);
-                for (let i = 0; i < logical.length; i++) {
-                    const p = logical[i];
-                    s.points[i] = { x: (p.x * Math.cos(rot) - p.y * Math.sin(rot)) * s.ppx + startAnchor.x, y: (p.x * Math.sin(rot) + p.y * Math.cos(rot)) * s.ppx + startAnchor.y };
-                }
-                let area = 0;
-                for (let i = 0; i < s.points.length; i++) {
-                    const p1 = s.points[i], p2 = s.points[(i + 1) % s.points.length];
-                    area += p1.x * p2.y - p2.x * p1.y;
-                }
-                setAreaValue(Math.abs(area / (2 * s.ppx * s.ppx)).toFixed(2));
-                
-                if (shouldFit && canvasRef.current) {
-                    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-                    s.points.forEach(p => { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y); });
-                    const pad = 40; 
-                    s.zoom = Math.min((canvasRef.current.width - pad * 2) / (maxX - minX || 1), (canvasRef.current.height - pad * 2) / (maxY - minY || 1));
-                    s.cameraX = canvasRef.current.width / 2 - ((minX + maxX) / 2) * s.zoom;
-                    s.cameraY = canvasRef.current.height / 2 - ((minY + maxY) / 2) * s.zoom;
-                }
-                setUpdateTrigger(p => p + 1);
-            };
-
-            const draw = useCallback(() => {
-                const canvas = canvasRef.current;
-                if (!canvas) return;
-                const ctx = canvas.getContext('2d');
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                if (s.points.length === 0) return;
-                
-                if (s.isClosed) {
-                    ctx.beginPath(); ctx.moveTo(w2s(s.points[0]).x, w2s(s.points[0]).y); 
-                    for (let i = 1; i < s.points.length; i++) ctx.lineTo(w2s(s.points[i]).x, w2s(s.points[i]).y); 
-                    ctx.closePath();
-                    ctx.fillStyle = 'rgba(94, 92, 230, 0.15)'; ctx.fill();
-                }
-                const limit = s.isClosed ? s.points.length : s.points.length - 1;
-                for (let i = 0; i < limit; i++) {
-                    const p1 = w2s(s.points[i]), p2 = w2s(s.points[(i + 1) % s.points.length]), isAuto = s.isClosed && i === s.points.length - 1;
-                    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineWidth = 6; ctx.lineCap = 'round';
-                    if (isAuto) { ctx.setLineDash([8, 8]); ctx.strokeStyle = '#3b82f6'; } else { ctx.setLineDash([]); ctx.strokeStyle = s.manualLengths[i] !== undefined ? '#FFFFFF' : '#8E8E93'; }
-                    ctx.stroke();
-                }
-                ctx.setLineDash([]);
-                s.points.forEach((pWorld, i) => {
-                    if (s.isClosed) {
-                        let actualD = getActualAngle(i);
-                        const isFixed = s.fixedAngles[i] !== undefined;
-                        let labelAngle = isFixed ? s.fixedAngles[i] : Math.round(actualD * 10) / 10;
-                        let labelColor = isFixed ? '#30d158' : '#8E8E93';
-                        if (isFixed && Math.abs(actualD - s.fixedAngles[i]) > 3) { labelAngle = Math.round(actualD * 10) / 10; labelColor = '#8E8E93'; }
-                        const label = `${labelAngle}°`; ctx.font = '600 14px sans-serif'; const tw = ctx.measureText(label).width;
-                        const pPrev = w2s(s.points[(i - 1 + s.points.length) % s.points.length]), pCurr = w2s(s.points[i]), pNext = w2s(s.points[(i + 1) % s.points.length]);
-                        if (!pPrev || !pCurr || !pNext) return;
-                        const v1 = { x: pPrev.x - pCurr.x, y: pPrev.y - pCurr.y }, v2 = { x: pNext.x - pCurr.x, y: pNext.y - pCurr.y };
-                        const l1 = Math.hypot(v1.x, v1.y), l2 = Math.hypot(v2.x, v2.y);
-                        let mid = { x: v1.x / l1 + v2.x / l2, y: v1.y / l1 + v2.y / l2 };
-                        if (Math.hypot(mid.x, mid.y) < 0.001) mid = { x: -v1.y, y: v1.x };
-                        let bisectorAngle = Math.atan2(mid.y, mid.x); if (actualD > 180) bisectorAngle += Math.PI;
-                        const tx = pCurr.x + Math.cos(bisectorAngle) * 42, ty = pCurr.y + Math.sin(bisectorAngle) * 42;
-                        ctx.fillStyle = 'rgba(28, 28, 30, 0.9)'; ctx.beginPath(); ctx.roundRect(tx - tw / 2 - 6, ty - 12, tw + 12, 24, 6); ctx.fill();
-                        ctx.fillStyle = labelColor; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, tx, ty);
-                    }
-                });
-                s.points.forEach((pWorld, i) => {
-                    const p = w2s(pWorld); ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
-                    ctx.fillStyle = (i === 0) ? '#FFFFFF' : '#1C1C1E'; ctx.fill(); ctx.strokeStyle = '#5E5CE6'; ctx.lineWidth = 3; ctx.stroke();
-                });
-                for (let i = 0; i < limit; i++) {
-                    const p1 = w2s(s.points[i]), p2 = w2s(s.points[(i + 1) % s.points.length]), isAuto = s.isClosed && i === s.points.length - 1, midX = (p1.x + p2.x) / 2, midY = (p1.y + p2.y) / 2;
-                    const d = Math.hypot(s.points[(i+1)%s.points.length].x - s.points[i].x, s.points[(i+1)%s.points.length].y - s.points[i].y), val = s.manualLengths[i] !== undefined ? s.manualLengths[i] : (d / s.ppx), label = `${val.toFixed(2)}m`;
-                    ctx.font = '600 14px ui-monospace, monospace'; const tw = ctx.measureText(label).width;
-                    ctx.fillStyle = isAuto ? '#3b82f6' : (s.manualLengths[i] !== undefined ? '#FFFFFF' : 'rgba(142,142,147,0.9)');
-                    ctx.beginPath(); ctx.roundRect(midX - tw / 2 - 9, midY - 13, tw + 18, 26, 6); ctx.fill();
-                    ctx.fillStyle = (s.manualLengths[i] !== undefined) ? '#000000' : '#FFFFFF'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, midX, midY);
-                }
-            }, []);
-
-            const finalizeDrawing = () => {
-                saveState(); s.isClosed = true; let sum = 0; const N = s.points.length;
-                for (let i = 0; i < N; i++) sum += s.points[i].x * s.points[(i+1)%N].y - s.points[(i+1)%N].x * s.points[i].y;
-                s.globalIsCW = sum > 0; s.globalBaseAngle = Math.atan2(s.points[1].y - s.points[0].y, s.points[1].x - s.points[0].x);
-                rebuildGeometry(true); draw();
-            };
-
-            const rotateDrawing = (deg = 90) => {
-                if (!s.points.length) return;
-                saveState(); const rad = deg * Math.PI / 180; let cx = 0, cy = 0; s.points.forEach(p => { cx += p.x; cy += p.y; }); cx /= s.points.length; cy /= s.points.length;
-                s.points = s.points.map(p => {
-                    const dx = p.x - cx, dy = p.y - cy;
-                    return { x: cx + dx * Math.cos(rad) - dy * Math.sin(rad), y: cy + dx * Math.sin(rad) + dy * Math.cos(rad) };
-                });
-                s.globalBaseAngle += rad; draw(); if (s.isClosed) showToast('図を回転しました');
-                setUpdateTrigger(p => p + 1);
-            };
-
-            const resetDrawing = () => {
-                saveState(); s.points = []; s.manualLengths = {}; s.fixedAngles = {}; s.isClosed = false; s.updateCount = 0;
-                s.cameraX = 0; s.cameraY = 0; s.zoom = 1; setAreaValue('--.--'); draw();
-                setUpdateTrigger(p => p + 1);
-            };
-
-            const executeUpdate = () => {
-                if (!s.isClosed) { showToast('図形を閉じてから実行してください'); return; }
-                saveState(); const N = s.points.length; let hasManual = false;
-                for (let i = 0; i < N; i++) {
-                    if (s.manualLengths[i] !== undefined) {
-                        const p1 = s.points[i], p2 = s.points[(i + 1) % N], d = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-                        if (d > 0) { s.ppx = d / s.manualLengths[i]; hasManual = true; break; }
-                    }
-                }
-                for (let i = 0; i < N; i++) {
-                    if (s.fixedAngles[i] === undefined) {
-                        let actualD = getActualAngle(i);
-                        if (Math.abs(actualD - 90) <= 10) s.fixedAngles[i] = 90;
-                        else if (Math.abs(actualD - 270) <= 10) s.fixedAngles[i] = 270;
-                    }
-                }
-                s.updateCount++; rebuildGeometry(true); draw(); showToast('作図を更新しました');
-            };
-
-            const applyValue = (valStr) => {
-                const val = parseFloat(valStr);
-                if (activeInputTarget === 'slope') {
-                    handleSlopeChange(valStr);
-                } else if (activeInputTarget === 'base') {
-                    setBaseInput(valStr);
-                } else {
-                    if (activeInputTarget === 'edge') { 
-                        if (!isNaN(val) && val > 0) s.manualLengths[s.selectedIdx] = val; 
-                        else delete s.manualLengths[s.selectedIdx]; 
-                    } else if (activeInputTarget === 'angle') { 
-                        if (!isNaN(val) && val >= 0) s.fixedAngles[s.selectedIdx] = val; 
-                        else delete s.fixedAngles[s.selectedIdx]; 
-                    }
-                    draw();
-                    setUpdateTrigger(p => p + 1);
-                }
-            };
-
-            const selectInputTarget = (target) => {
-                let val = '';
-                if (target === 'slope') {
-                    val = slopeInput;
-                } else if (target === 'base') {
-                    val = baseInput;
-                } else {
-                    val = s.activeMode === 'edge' ? s.manualLengths[s.selectedIdx] : s.fixedAngles[s.selectedIdx];
-                    if (!val && s.activeMode === 'edge') {
-                        const p1 = s.points[s.selectedIdx], p2 = s.points[(s.selectedIdx+1)%s.points.length];
-                        if (p1 && p2) val = (Math.hypot(p2.x - p1.x, p2.y - p1.y) / s.ppx).toFixed(2);
-                    }
-                    else if (!val && s.isClosed && s.activeMode === 'angle') val = Math.round(getActualAngle(s.selectedIdx) * 10) / 10;
-                }
-                setActiveInputTarget(target);
-                const finalVal = String(val === null || val === undefined ? '' : val);
-                setModalValue(finalVal); 
-                setIsFirstInput(true);
-            };
-
-            const handleNumpadClick = (key) => {
-                if (s.isClosed) {
-                    if (activeInputTarget === 'edge' && s.selectedIdx === s.points.length - 1) {
-                        showToast('青の点線は自動計算のため編集できません');
-                        return;
-                    }
-                    if (activeInputTarget === 'angle' && (s.selectedIdx === 0 || s.selectedIdx === s.points.length - 1)) {
-                        showToast('この角度は自動計算のため編集できません');
-                        return;
-                    }
-                }
-                setModalValue(prev => {
-                    let newVal = prev;
-                    if (key === 'CLEAR') { 
-                        newVal = ''; 
-                        setIsFirstInput(true); 
-                    } else {
-                        if (isFirstInput) { 
-                            if (activeInputTarget === 'edge' || activeInputTarget === 'angle') saveState();
-                            setIsFirstInput(false); 
-                            newVal = key === '.' ? '0.' : (key === '00' ? '0' : key); 
-                        } else {
-                            if (key === '.' && prev.includes('.')) newVal = prev;
-                            else if (prev === '0') { 
-                                if (key === '0' || key === '00') newVal = '0'; 
-                                else if (key !== '.') newVal = key; 
-                                else newVal = prev + key;
-                            } else {
-                                newVal = prev + key;
-                            }
-                        }
-                    }
-                    applyValue(newVal);
-                    return newVal;
-                });
-            };
-
-            const handlePresetClick = (val) => {
-                if (s.isClosed) {
-                    if (activeInputTarget === 'edge' && s.selectedIdx === s.points.length - 1) {
-                        showToast('青の点線は自動計算のため編集できません');
-                        return;
-                    }
-                    if (activeInputTarget === 'angle' && (s.selectedIdx === 0 || s.selectedIdx === s.points.length - 1)) {
-                        showToast('この角度は自動計算のため編集できません');
-                        return;
-                    }
-                }
-                if (activeInputTarget === 'edge' || activeInputTarget === 'angle') saveState();
-                const strVal = String(val);
-                setModalValue(strVal);
-                setIsFirstInput(false);
-                applyValue(strVal);
-            };
-
-            const exportDrawing = () => {
-                if (s.points.length < 3 || !s.isClosed) { showToast('図形を閉じてから保存してください'); return; }
-                const canvas = canvasRef.current, dataUrl = canvas.toDataURL('image/png');
-                const currentState = { points: JSON.parse(JSON.stringify(s.points)), manualLengths: {...s.manualLengths}, fixedAngles: {...s.fixedAngles}, isClosed: s.isClosed, ppx: s.ppx, globalBaseAngle: s.globalBaseAngle, globalIsCW: s.globalIsCW, updateCount: s.updateCount, cameraX: s.cameraX, cameraY: s.cameraY, zoom: s.zoom };
-                const newData = { img: dataUrl, area: areaValue, time: new Date().toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), memo: '', state: currentState, checked: false };
-                setAreaSavedData([...savedData, newData]); showToast('保存しました');
-            };
-
-            const loadHistoryItem = (idx) => {
-                const data = savedData[idx]; if (!data) return;
-                if (!data.state) { showToast('古いデータのため再編集できません'); return; }
-                saveState();
-                s.points = JSON.parse(JSON.stringify(data.state.points)); s.manualLengths = {...data.state.manualLengths}; s.fixedAngles = {...data.state.fixedAngles}; s.isClosed = data.state.isClosed; s.ppx = data.state.ppx; s.globalBaseAngle = data.state.globalBaseAngle; s.globalIsCW = data.state.globalIsCW; s.updateCount = data.state.updateCount || 0; s.cameraX = data.state.cameraX || 0; s.cameraY = data.state.cameraY || 0; s.zoom = data.state.zoom || 1;
-                rebuildGeometry(false); draw(); showToast('データを読み込みました');
-                setActiveTab('draw');
-                setUpdateTrigger(p => p + 1);
-            };
-
-            const updateMemo = (idx, val) => { const newData = [...savedData]; newData[idx].memo = val; setAreaSavedData(newData); };
-            const toggleChecked = (idx) => { const newData = [...savedData]; newData[idx].checked = !newData[idx].checked; setAreaSavedData(newData); };
-            const deleteHistoryItem = (idx) => { const newData = [...savedData]; newData.splice(idx, 1); setAreaSavedData(newData); showToast('削除しました'); };
-            
-            const handleSlopeChange = (val) => { 
-                setSlopeInput(val); const mm = parseFloat(val); 
-                if (isNaN(mm) || mm <= 0) setSlopeDeg('0.0°'); 
-                else { const deg = Math.atan(mm / 100) * 180 / Math.PI; setSlopeDeg(deg.toFixed(1) + '°'); }
-            };
-
-            useEffect(() => {
-                const sVal = parseFloat(slopeInput); const bVal = parseFloat(baseInput);
-                if (!isNaN(sVal) && !isNaN(bVal) && bVal > 0) {
-                    const hypot = bVal * Math.sqrt(1 + Math.pow(sVal/100, 2));
-                    setHypotenuseValue(Math.round(hypot).toLocaleString());
-                } else setHypotenuseValue('-');
-            }, [slopeInput, baseInput]);
-
-            useEffect(() => {
-                if (activeTab === 'draw') {
-                    setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
-                }
-            }, [activeTab]);
-
-            useEffect(() => {
-                const handleResize = () => { 
-                    if (canvasRef.current && containerRef.current && containerRef.current.clientWidth > 0) { 
-                        canvasRef.current.width = containerRef.current.clientWidth; 
-                        canvasRef.current.height = containerRef.current.clientHeight; 
-                        draw(); 
-                    } 
-                };
-                window.addEventListener('resize', handleResize); handleResize(); setTimeout(handleResize, 100);
-                const canvas = canvasRef.current; if (!canvas) return;
-                const onStart = (e) => { s.isInteractingWithCanvas = true; const raw = getRawCoords(e); s.lastRawPos = raw; s.startRawPos = {x: raw.x, y: raw.y}; s.hasMoved = false; if (e.cancelable) e.preventDefault(); s.isPanning = true; };
-                const onMove = (e) => { if (!s.isInteractingWithCanvas || !s.isPanning) return; const raw = getRawCoords(e); if (e.cancelable) e.preventDefault(); if (Math.hypot(raw.x - s.startRawPos.x, raw.y - s.startRawPos.y) > 5) s.hasMoved = true; if (!s.isClosed) return; if (s.isClosed && s.hasMoved) { s.cameraX += raw.x - s.lastRawPos.x; s.cameraY += raw.y - s.lastRawPos.y; s.lastRawPos = raw; draw(); } };
-                const onEnd = () => {
-                    if (!s.isInteractingWithCanvas) return; s.isInteractingWithCanvas = false; s.isPanning = false;
-                    if (!s.hasMoved) {
-                        let raw = s.startRawPos;
-                        if (!s.isClosed) { 
-                            saveState(); 
-                            if (s.points.length >= 3 && Math.hypot(raw.x - w2s(s.points[0]).x, raw.y - w2s(s.points[0]).y) < 50) finalizeDrawing();
-                            else {
-                                if (s.points.length > 0) {
-                                    const lastP = w2s(s.points[s.points.length - 1]);
-                                    let dx = raw.x - lastP.x; let dy = raw.y - lastP.y;
-                                    if (Math.abs(dx) < 30) dx = 0; else if (Math.abs(dy) < 30) dy = 0;
-                                    raw = { x: lastP.x + dx, y: lastP.y + dy };
-                                }
-                                s.points.push(s2w(raw)); draw(); setUpdateTrigger(p => p + 1);
-                            } 
-                            return; 
-                        }
-                        let hitType = null, hitIdx = -1, minDist = Infinity;
-                        s.points.forEach((p, i) => { const d = Math.hypot(raw.x - w2s(p).x, raw.y - w2s(p).y); if (d < 45 && d < minDist) { minDist = d; hitType = 'vertex'; hitIdx = i; } });
-                        if (minDist > 25) {
-                            for (let i = 0; i < s.points.length; i++) { const p1 = w2s(s.points[i]), p2 = w2s(s.points[(i+1)%s.points.length]); const midX = (p1.x + p2.x) / 2, midY = (p1.y + p2.y) / 2; const d = Math.hypot(raw.x - midX, raw.y - midY); if (d < 45 && d < minDist) { minDist = d; hitType = 'label'; hitIdx = i; } }
-                            for (let i = 0; i < s.points.length; i++) { const d = distToSegment(raw, w2s(s.points[i]), w2s(s.points[(i+1)%s.points.length])); if (d < 35 && d < minDist) { minDist = d; hitType = 'edge'; hitIdx = i; } }
-                        }
-                        if (hitType === 'vertex') { s.activeMode = 'angle'; s.selectedIdx = hitIdx; selectInputTarget('angle'); } else if (hitType === 'edge' || hitType === 'label') { s.activeMode = 'edge'; s.selectedIdx = hitIdx; selectInputTarget('edge'); }
-                    }
-                };
-                const onTouchStart = (e) => {
-                    if (e.touches.length === 2) {
-                        s.isPanning = false;
-                        s.isInteractingWithCanvas = true;
-                        s.isPinching = true;
-                        s.hasMoved = true;
-                        s.initialPinchDist = Math.hypot(
-                            e.touches[0].clientX - e.touches[1].clientX,
-                            e.touches[0].clientY - e.touches[1].clientY
-                        );
-                        s.initialZoom = s.zoom;
-                        s.initialCameraX = s.cameraX;
-                        s.initialCameraY = s.cameraY;
-                        const r = canvas.getBoundingClientRect();
-                        const center = {
-                            x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left,
-                            y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top
-                        };
-                        s.initialPinchCenter = center;
-                        s.initialPinchWorld = {
-                            x: (center.x - s.initialCameraX) / s.initialZoom,
-                            y: (center.y - s.initialCameraY) / s.initialZoom
-                        };
-                        if (e.cancelable) e.preventDefault();
-                        return;
-                    }
-                    onStart(e);
-                };
-                const onTouchMove = (e) => {
-                    if (s.isInteractingWithCanvas && e.touches.length === 2 && s.initialPinchDist && s.initialPinchWorld) {
-                        const rect = canvas.getBoundingClientRect();
-                        const currentCenter = {
-                            x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left,
-                            y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top
-                        };
-                        const d = Math.hypot(
-                            e.touches[0].clientX - e.touches[1].clientX,
-                            e.touches[0].clientY - e.touches[1].clientY
-                        );
-                        const nz = Math.max(0.1, Math.min(10, s.initialZoom * (d / s.initialPinchDist)));
-                        s.zoom = nz;
-                        s.cameraX = currentCenter.x - s.initialPinchWorld.x * nz;
-                        s.cameraY = currentCenter.y - s.initialPinchWorld.y * nz;
-                        s.hasMoved = true;
-                        if (!s.pinchRaf) {
-                            s.pinchRaf = requestAnimationFrame(() => {
-                                s.pinchRaf = 0;
-                                draw();
-                            });
-                        }
-                        if (e.cancelable) e.preventDefault();
-                        return;
-                    }
-                    onMove(e);
-                };
-                const onTouchEnd = (e) => {
-                    if (s.pinchRaf) {
-                        cancelAnimationFrame(s.pinchRaf);
-                        s.pinchRaf = 0;
-                    }
-                    const remainingTouches = e && e.touches ? e.touches.length : 0;
-                    if (s.isPinching) {
-                        if (remainingTouches >= 2) return;
-                        s.initialPinchDist = null;
-                        s.initialPinchCenter = null;
-                        s.initialPinchWorld = null;
-                        s.isPinching = false;
-                        s.isInteractingWithCanvas = false;
-                        s.isPanning = false;
-                        s.hasMoved = true;
-                        return;
-                    }
-                    s.initialPinchDist = null;
-                    s.initialPinchCenter = null;
-                    s.initialPinchWorld = null;
-                    onEnd();
-                };
-                const onTouchCancel = () => {
-                    if (s.pinchRaf) {
-                        cancelAnimationFrame(s.pinchRaf);
-                        s.pinchRaf = 0;
-                    }
-                    s.initialPinchDist = null;
-                    s.initialPinchCenter = null;
-                    s.initialPinchWorld = null;
-                    s.isPinching = false;
-                    s.isInteractingWithCanvas = false;
-                    s.isPanning = false;
-                };
-                
-                const handleKeyInput = (e) => {
-                    const k = e.key;
-                    if (activeTab === 'draw') {
-                        if (k >= '0' && k <= '9') handleNumpadClick(k);
-                        else if (k === '.') handleNumpadClick('.');
-                        else if (k === 'Backspace') handleNumpadClick('CLEAR');
-                        else if (k === 'Enter') executeUpdate();
-                    } else if (activeTab === 'slope_calc') {
-                        if (k >= '0' && k <= '9') handleSlopeKeypad(k);
-                        else if (k === '.') handleSlopeKeypad('.');
-                        else if (k === 'Backspace') handleSlopeKeypad('C');
-                        else if (k === 'Enter') handleSlopeKeypad('⏎');
-                    }
-                };
-
-                canvas.addEventListener('mousedown', onStart);
-                window.addEventListener('mousemove', onMove);
-                window.addEventListener('mouseup', onEnd);
-                canvas.addEventListener('touchstart', onTouchStart, { passive: false });
-                window.addEventListener('touchmove', onTouchMove, { passive: false });
-                window.addEventListener('touchend', onTouchEnd, { passive: false });
-                window.addEventListener('touchcancel', onTouchCancel, { passive: false });
-                window.addEventListener('keydown', handleKeyInput);
-
-                return () => { 
-                    if (s.pinchRaf) {
-                        cancelAnimationFrame(s.pinchRaf);
-                        s.pinchRaf = 0;
-                    }
-                    window.removeEventListener('resize', handleResize); 
-                    canvas.removeEventListener('mousedown', onStart); 
-                    window.removeEventListener('mousemove', onMove); 
-                    window.removeEventListener('mouseup', onEnd); 
-                    canvas.removeEventListener('touchstart', onTouchStart); 
-                    window.removeEventListener('touchmove', onTouchMove); 
-                    window.removeEventListener('touchend', onTouchEnd);
-                    window.removeEventListener('touchcancel', onTouchCancel);
-                    window.removeEventListener('keydown', handleKeyInput);
-                };
-            }, [draw, s, activeTab, activeInputTarget, slopeActiveField, slopeIsNewEntry]);
-            
-            useEffect(() => { rebuildGeometry(false); draw(); }, []);
-
-            const renderHistoryItem = (data, idx) => {
-                const actualIdx = savedData.length - 1 - idx;
-                return (
-                    <div key={actualIdx} className={`p-3 rounded-[12px] border shadow-md transition-all flex flex-col ${data.checked ? 'bg-[#2c2c2e] border-[#5E5CE6]' : 'bg-[#2c2c2e] border-zinc-700'}`}>
-                        <div className="flex items-center gap-2 mb-2">
-                            <input type="checkbox" checked={data.checked || false} onChange={() => toggleChecked(actualIdx)} className="ios-checkbox shrink-0" style={{ width: '1.25rem', height: '1.25rem' }} />
-                            <input type="text" value={data.memo || ''} onChange={(e) => updateMemo(actualIdx, e.target.value)} className="flex-1 bg-black border border-zinc-700 rounded-md px-2 py-1 text-white font-bold text-[14px] focus:outline-none focus:border-[#5E5CE6]" placeholder="メモ..." />
-                        </div>
-                        <div className="flex justify-between items-center mb-2 px-1 gap-2">
-                            <span className="text-zinc-300 font-bold text-[14px] whitespace-nowrap">{data.time}</span>
-                            <div className="flex items-baseline gap-1 min-w-0">
-                                <span className="text-white font-bold text-[18px] whitespace-nowrap overflow-hidden">{data.area}</span>
-                                <span className="text-zinc-300 font-bold text-[14px] whitespace-nowrap">m²</span>
-                            </div>
-                        </div>
-                        <div className="relative cursor-pointer active:opacity-70 transition-opacity mb-2 flex-1 flex items-center justify-center bg-black rounded-md border border-zinc-800 overflow-hidden min-h-[120px]" onClick={() => loadHistoryItem(actualIdx)}>
-                            <img src={data.img} className="w-full max-h-[240px] object-contain" alt="Area Map" />
-                            <div className="absolute bottom-2 right-2 bg-black/70 text-white text-[12px] font-bold px-2 py-1 rounded shadow-md pointer-events-none backdrop-blur-sm"> タップで再編集 </div>
-                        </div>
-                        <button onClick={() => deleteHistoryItem(actualIdx)} className="w-full py-2 bg-[#1c1c1e] text-red-500 font-bold rounded-md text-[14px] active:scale-95 transition-transform border border-zinc-800 shrink-0">削除する</button>
-                    </div>
-                );
-            };
-
-            const isSlopeValid = (slopeY !== '' || slopeX !== '') && (slopeC !== '' || slopeA !== '' || slopeB !== '');
-
-            return (
-                <div className="flex flex-col text-[14px]">
-                    <div className="flex justify-center mb-4 shrink-0">
-                        <div className="bg-[#1c1c1e] p-1 rounded-xl flex gap-1 shadow-lg border border-zinc-800 relative">
-                            {/* Move Slope Tab to the left */}
-                            <button onClick={() => setActiveTab('slope_calc')} className={`px-5 sm:px-8 py-1.5 rounded-lg text-[14px] font-bold transition-all relative z-10 ${activeTab === 'slope_calc' ? 'bg-[#5E5CE6] text-white shadow-md' : 'text-zinc-300 hover:text-white'}`}>勾配</button>
-                            <button onClick={() => setActiveTab('draw')} className={`px-5 sm:px-8 py-1.5 rounded-lg text-[14px] font-bold transition-all relative z-10 ${activeTab === 'draw' ? 'bg-[#5E5CE6] text-white shadow-md' : 'text-zinc-300 hover:text-white'}`}>作図</button>
-                            <button onClick={() => setActiveTab('history')} className={`px-5 sm:px-8 py-1.5 rounded-lg text-[14px] font-bold transition-all flex items-center justify-center gap-2 relative z-10 ${activeTab === 'history' ? 'bg-[#5E5CE6] text-white shadow-md' : 'text-zinc-300 hover:text-white'}`}>
-                                履歴
-                                {savedData.length > 0 && (
-                                    <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === 'history' ? 'bg-white text-[#5E5CE6]' : 'bg-[#3a3a3c] text-white'}`}>{savedData.length}</span>
-                                )}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className={`flex flex-col md:flex-row gap-4 md:gap-6 ${activeTab === 'draw' ? '' : 'hidden'}`}>
-                        <div className="w-full md:w-[360px] flex flex-col gap-3 shrink-0">
-                            <div className="ios-card-base px-3 py-2 flex justify-between items-center shadow-lg shrink-0">
-                                <div className="flex gap-2">
-                                    <button onClick={undo} className="btn-3d btn-3d-zinc px-3 h-9 text-white text-[13px] font-bold rounded-lg"><Icon name="undo" size={14} className="mr-1"/>戻る</button>
-                                    <button onClick={() => rotateDrawing(90)} className="btn-3d btn-3d-zinc px-3 h-9 text-white text-[13px] font-bold rounded-lg"><Icon name="rotate" size={14} className="mr-1"/>回転</button>
-                                </div>
-                                <button onClick={() => {rebuildGeometry(true); draw();}} className="btn-3d btn-3d-silver px-3 h-9 text-[#444] text-[14px] font-bold rounded-lg">全体</button>
-                            </div>
-                            
-                            <div className="ios-card-base px-3 py-2 flex flex-col gap-2 shrink-0 shadow-lg">
-                                <div className="flex items-center gap-2 w-full">
-                                    <div className="flex items-center justify-center shrink-0">
-                                        <svg width="40" height="30" viewBox="4 4 56 44" className="text-zinc-300">
-                                            <path d="M10 28 L54 28 L54 8" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
-                                            <path d="M10 28 L54 8" fill="none" stroke="currentColor" strokeWidth="2.5" strokeDasharray="5,5" strokeLinecap="round"/>
-                                            <text x="32" y="46" fontSize="18" textAnchor="middle" fontWeight="900" fill="currentColor">100</text>
-                                        </svg>
-                                    </div>
-                                    <div onClick={() => selectInputTarget('slope')} className={`alloc-input-field flex-1 !text-left !px-3 !h-9 !text-[14px] cursor-pointer flex items-center bg-[#2c2c2e] border-2 ${activeInputTarget === 'slope' ? '!border-[#ff9f0a]' : '!border-zinc-700'}`}>
-                                        {slopeInput ? slopeInput : <span className="text-zinc-300 font-normal">勾配100</span>}
-                                    </div>
-                                    <div className="flex items-center justify-center min-w-[64px] bg-[#2c2c2e] border border-zinc-700 h-9 rounded-lg shadow-sm px-1 text-white font-bold text-[14px]"> {slopeDeg} </div>
-                                </div>
-                            </div>
-
-                            <div className="ios-card-base px-3 py-2 flex flex-col gap-1.5 shrink-0 shadow-lg border-2 transition-colors" style={{ borderColor: themeColor, backgroundColor: '#1a1a1c' }}>
-                                <div className="flex justify-between items-center px-1">
-                                    <h2 className="text-[14px] font-bold text-white flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: themeColor }}></div>
-                                        {activeInputTarget === 'slope' ? '勾配の入力' : activeInputTarget === 'edge' ? '辺寸法の入力' : '角度の入力'}
-                                    </h2>
-                                </div>
-                                <div className="relative mb-1">
-                                    <div className={`w-full text-center text-[26px] font-bold bg-[#2c2c2e] text-white h-12 rounded-lg flex items-center justify-center border-2 transition-colors`} style={{ borderColor: isFirstInput ? themeColor : 'transparent' }}>
-                                        {modalValue || '0'}
-                                    </div>
-                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 font-bold text-[16px] pointer-events-none">{activeInputTarget === 'slope' ? '' : activeInputTarget === 'angle' ? '°' : 'm'}</span>
-                                </div>
-                                {activeInputTarget === 'angle' && (
-                                    <div className="grid grid-cols-3 gap-1.5 mt-0.5">
-                                        <button onClick={() => handlePresetClick('90')} className="py-2 bg-[#2c2c2e] text-white rounded-md font-bold btn-3d btn-3d-zinc text-[14px]">90°</button>
-                                        <button onClick={() => handlePresetClick('270')} className="py-2 bg-[#2c2c2e] text-white rounded-md font-bold btn-3d btn-3d-zinc text-[14px]">270°</button>
-                                        <button onClick={() => handlePresetClick('45')} className="py-2 bg-[#2c2c2e] text-white rounded-md font-bold btn-3d btn-3d-zinc text-[14px]">45°</button>
-                                    </div>
-                                )}
-                                <div className="flex gap-1.5">
-                                    <div className="grid grid-cols-3 gap-1.5 flex-[3]">
-                                        {['7','8','9','4','5','6','1','2','3','0','00','.'].map(key => (
-                                            <button key={key} onClick={() => handleNumpadClick(key)} className="bg-[#2c2c2e] text-white rounded-md font-bold text-[20px] btn-3d btn-3d-zinc flex items-center justify-center active:bg-[#3a3a3c] transition-colors" style={{ height: '58px' }}> {key} </button>
-                                        ))}
-                                    </div>
-                                    <div className="flex flex-col gap-1.5 flex-[1]">
-                                        <button onClick={() => handleNumpadClick('CLEAR')} className="flex-[1] text-white rounded-md font-bold btn-3d btn-3d-darkgray flex items-center justify-center text-[14px]" style={{ height: '58px' }}> クリア </button>
-                                        <button onClick={resetDrawing} className="flex-[1] text-white rounded-md font-bold btn-3d btn-3d-red flex items-center justify-center text-[14px]" style={{ height: '58px' }}> リセット </button>
-                                        <button onClick={executeUpdate} className="flex-[2] text-white rounded-md font-bold btn-3d btn-3d-blue flex items-center justify-center text-[14px]" style={{ minHeight: '122px' }}> 作図 </button>
-                                    </div>
-                                </div>
+            <!-- 作図ビュー -->
+            <div id="drawView" class="tab-view active flex flex-col flex-1 overflow-hidden">
+                <header class="py-2.5 px-4 md:px-8 border-b border-white/10 bg-[#1C1C1E]">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 max-w-screen-xl mx-auto">
+                        <!-- 面積表示ボックス -->
+                        <div class="flex justify-center md:justify-start">
+                            <div id="areaBox" class="bg-system-indigo text-white px-8 py-2 rounded-2xl flex items-baseline gap-3 shadow-lg border border-indigo-400/30">
+                                <span class="text-sm font-black opacity-80 tracking-wider uppercase">面積</span>
+                                <span id="areaDisplay" class="text-3xl md:text-4xl font-black tabular-nums tracking-tighter">--.--</span>
+                                <span class="text-base font-bold opacity-80">m²</span>
                             </div>
                         </div>
                         
-                        <div className="flex-1 flex flex-col h-[50vh] md:h-auto md:min-h-[500px]">
-                            <div className="flex justify-between items-center mb-3 shrink-0">
-                                <div className="bg-[#5E5CE6] text-white px-4 h-12 flex items-center gap-2 rounded-xl shadow-lg">
-                                    <span className="text-[14px] font-bold opacity-80">面積</span> 
-                                    <span className="text-2xl font-bold leading-none">{areaValue}</span> 
-                                    <span className="text-[14px] font-bold opacity-80">m²</span>
-                                </div>
-                                <button onClick={exportDrawing} className="h-12 px-5 btn-3d btn-3d-orange text-white text-[14px] font-bold rounded-xl shadow-lg flex items-center justify-center"> 履歴に保存 </button>
-                            </div>
-
-                            <div className="canvas-container relative shadow-2xl bg-[#1c1c1e] flex flex-col rounded-2xl overflow-hidden border border-[#38383a] flex-1" ref={containerRef}>
-                                <div className="absolute inset-0 opacity-20 pointer-events-none" style={{backgroundImage: 'radial-gradient(#FFFFFF 1px, transparent 1px)', backgroundSize: '32px 32px'}}></div>
-                                <canvas ref={canvasRef} className="w-full h-full block touch-none cursor-crosshair flex-1"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className={`flex flex-col gap-4 ${activeTab === 'history' ? '' : 'hidden'}`}>
-                        <div className="ios-card-base overflow-hidden shadow-xl border border-zinc-800 flex flex-col">
-                            <div className="bg-[#2c2c2e] p-2.5 flex justify-between items-center border-b border-zinc-700 shrink-0">
-                                <h2 className="text-[14px] font-bold text-white uppercase tracking-widest">保存済み 面積履歴</h2>
+                        <!-- ツールアクションボタン群 -->
+                        <div class="flex items-center justify-between md:justify-end gap-2 overflow-x-auto py-1">
+                            <div class="flex gap-2">
+                                <button type="button" id="undoBtn" class="header-btn bg-system-gray text-white btn-tap">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 10h10a5 5 0 015 5v2m0 0l-4-4m4 4l4-4"/></svg>
+                                    戻る
+                                </button>
+                                <button type="button" id="fitBtn" class="header-btn bg-system-orange text-white btn-tap hidden">全体表示</button>
                             </div>
                             
-                            <div className="bg-[#111111] px-3 py-2 border-b border-zinc-700 flex justify-around items-center shrink-0">
-                                <div className="text-center">
-                                    <p className="text-[14px] text-zinc-300 font-bold uppercase mb-0.5">チェック合計</p>
-                                    <p className="text-[17px] font-black text-[#30d158]">{historyTotals.checked} <span className="text-[14px] font-bold">m²</span></p>
-                                </div>
-                                <div className="w-[1px] h-6 bg-zinc-700"></div>
-                                <div className="text-center">
-                                    <p className="text-[14px] text-zinc-300 font-bold uppercase mb-0.5">全合計</p>
-                                    <p className="text-[17px] font-black text-white">{historyTotals.all} <span className="text-[14px] font-bold">m²</span></p>
-                                </div>
-                            </div>
+                            <div class="h-6 w-px bg-white/20 mx-1"></div>
 
-                            <div className="p-3 bg-[#1c1c1e]">
-                                {savedData.length === 0 ? <div className="text-center text-zinc-300 py-10 font-bold italic text-[14px]">履歴なし</div> : 
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        {savedData.slice().reverse().map((data, idx) => renderHistoryItem(data, idx))}
-                                    </div>
-                                }
+                            <div class="flex gap-2">
+                                <button type="button" id="createRightTriBtn" class="header-btn bg-[#2C2C2E] border border-blue-500/60 text-blue-400 hover:bg-blue-950/30 btn-tap flex items-center gap-1.5 shrink-0">
+                                    <span class="text-base">⊿</span> 直角三角
+                                </button>
+                                <button type="button" id="createRectBtn" class="header-btn bg-[#2C2C2E] border border-emerald-500/60 text-emerald-400 hover:bg-emerald-950/30 btn-tap flex items-center gap-1.5 shrink-0">
+                                    <span class="text-base">□</span> 四角形
+                                </button>
+                                <button type="button" id="resetBtn" class="header-btn bg-system-red text-white btn-tap shrink-0">リセット</button>
                             </div>
                         </div>
                     </div>
+                </header>
 
-                    {/* Slope Tab */}
-                    <div className={`flex flex-col md:flex-row gap-6 animate-fade-in ${activeTab === 'slope_calc' ? '' : 'hidden'}`}>
-                        <div className="w-full md:w-[380px] flex flex-col gap-4">
-                            <div className="ios-card-base overflow-hidden border-2 border-zinc-700 shadow-xl flex flex-col">
-                                <div className="flex border-b border-zinc-700 relative h-14">
-                                    <div className={`relative flex-1 flex flex-col justify-center transition-all ${slopeActiveField === 'y' ? 'bg-[#2c2c2e] ring-2 ring-inset ring-orange-500 z-10' : ''}`} onClick={() => {setSlopeActiveField('y'); setSlopeIsNewEntry(true);}}>
-                                        <input type="text" readOnly value={slopeY} className="w-full h-full bg-transparent text-center text-[22px] text-white font-bold outline-none font-mono" placeholder="勾配" />
-                                        <span className="label-ios-slope">
-                                            {/* 三角形の大きさは変えず、底辺に100を追記 */}
-                                            <svg width="32" height="24" viewBox="0 0 40 40" className="text-zinc-300 overflow-visible">
-                                                <path d="M 5 20 L 35 20 L 35 5 Z" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                                                <text x="20" y="34" fontSize="12" textAnchor="middle" fill="currentColor" fontWeight="bold">100</text>
-                                            </svg>
-                                        </span>
-                                    </div>
-                                    <div className="w-[1px] h-full bg-zinc-700"></div>
-                                    <div className={`relative flex-1 flex flex-col justify-center transition-all ${slopeActiveField === 'x' ? 'bg-[#2c2c2e] ring-2 ring-inset ring-orange-500 z-10' : ''}`} onClick={() => {setSlopeActiveField('x'); setSlopeIsNewEntry(true);}}>
-                                        <input type="text" readOnly value={slopeX} className="w-full h-full bg-transparent text-center text-[22px] text-white font-bold outline-none font-mono" placeholder="角度" />
-                                        <span className="label-ios-slope">
-                                            <svg width="24" height="24" viewBox="0 0 24 24" className="text-zinc-300">
-                                                <path d="M 4 20 L 20 20 M 4 20 L 18 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                                                <path d="M 12 20 A 8 8 0 0 0 10 15" fill="none" stroke="currentColor" strokeWidth="1.5" />
-                                                <circle cx="11" cy="13" r="1.2" fill="currentColor" />
-                                            </svg>
-                                        </span>
-                                    </div>
+                <!-- サブアクションバー（更新・保存） -->
+                <div class="bg-[#1C1C1E] border-b border-white/10 px-4 md:px-8 py-2.5 z-40">
+                    <div class="flex gap-3 max-w-screen-xl mx-auto">
+                        <button type="button" id="executeBtn" class="flex-1 md:flex-initial md:px-10 h-[42px] bg-system-indigo text-white font-black rounded-xl shadow-lg btn-tap flex items-center justify-center gap-2 text-base">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l10 -10"/></svg>
+                            直角・整列して作図更新
+                        </button>
+                        <button type="button" id="exportBtn" class="flex-initial px-8 h-[42px] bg-system-orange text-white font-black rounded-xl shadow-lg btn-tap flex items-center justify-center gap-2 text-base">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            図面を保存
+                        </button>
+                    </div>
+                </div>
+
+                <!-- キャンバス -->
+                <div class="canvas-area">
+                    <div id="gridBg"></div>
+                    <canvas id="canvas"></canvas>
+                </div>
+                
+                <div style="height: var(--safe-bottom); background: #1C1C1E;"></div>
+            </div>
+
+            <!-- 履歴ビュー (iPad向けグリッドレイアウト) -->
+            <div id="historyView" class="tab-view scrollbar-hide flex-1" style="display:none;">
+                <div class="max-w-6xl mx-auto">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-xl font-bold text-white">保存済み図面一覧</h2>
+                        <span class="text-sm text-zinc-400 font-medium">タップして再編集できます</span>
+                    </div>
+                    <div id="historyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+                </div>
+            </div>
+
+            <!-- 勾配計算ビュー (iPad向け 2カラム・スプリットビュー構成) -->
+            <div id="slopeView" class="tab-view flex-1 overflow-y-auto bg-black p-4 md:p-6" style="display:none;">
+                <div class="max-w-6xl mx-auto flex flex-col md:flex-row md:items-start md:gap-8 animate-fade-in text-left">
+                    
+                    <!-- 左カラム: 入力窓 & テンキー -->
+                    <div class="flex-1 w-full md:max-w-md flex flex-col gap-4">
+                        <div class="bg-zinc-900 rounded-2xl overflow-visible border-2 border-zinc-600 shadow-2xl text-left">
+                            <div class="flex border-b border-zinc-700 relative">
+                                <div id="slope_field_y" class="relative flex-1 h-[58px] border-r border-zinc-700 flex flex-col justify-center transition-all cursor-pointer bg-zinc-800 ring-2 ring-inset ring-orange-500 z-10" onclick="setActiveSlopeField('y')">
+                                    <input type="text" id="slope_val_y" class="placeholder-silver w-full h-full bg-transparent text-center text-white font-bold outline-none font-mono" placeholder="勾配(100→↕︎)" inputmode="none" readonly>
                                 </div>
-                                <div className={`relative px-3 h-16 border-b border-zinc-700 flex flex-col justify-center transition-all ${slopeActiveField === 'c' ? 'bg-[#2c2c2e] ring-2 ring-inset ring-orange-500 z-10' : ''}`} onClick={() => {setSlopeActiveField('c'); setSlopeIsNewEntry(true);}}>
-                                    <span className="label-ios-slope text-[14px] opacity-80">水平寸法</span>
-                                    <input type="text" readOnly value={formatNum(slopeC)} className="w-full h-full bg-transparent text-center text-[28px] text-white font-black outline-none font-mono pt-1" placeholder="水平の長さ" />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 mt-1 text-zinc-300 font-bold text-[14px]">㎜</span>
+                                <div id="slope_field_x" class="relative flex-1 h-[58px] flex flex-col justify-center transition-all cursor-pointer" onclick="setActiveSlopeField('x')">
+                                    <input type="text" id="slope_val_x" class="placeholder-silver w-full h-full bg-transparent text-center text-white font-bold outline-none font-mono" placeholder="角度 (°)" inputmode="none" readonly>
                                 </div>
+                            </div>
+                            <div id="slope_field_c" class="relative px-4 h-[58px] border-b border-zinc-700 flex flex-col justify-center transition-all cursor-pointer" onclick="setActiveSlopeField('c')">
+                                <span class="label-ios">水平寸法</span>
+                                <input type="text" id="slope_val_c" class="w-full h-full bg-transparent text-center text-white font-black outline-none font-mono pt-1" placeholder="水平の距離or長さ" inputmode="none" readonly>
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 font-black text-base">㎜</span>
+                            </div>
+                            <div class="h-2 bg-[#09090b] shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] border-t border-[#000]"></div>
+                            
+                            <!-- テンキー (iPadで押しやすい高さを確保) -->
+                            <div class="grid grid-cols-4 bg-[#27272a] rounded-b-2xl overflow-hidden">
+                                <button onclick="handleSlopeKey('7')" class="flex items-center justify-center text-[23px] font-bold h-[4rem] border-r border-b border-zinc-700 active:opacity-60 bg-[#18181b] text-white">7</button>
+                                <button onclick="handleSlopeKey('8')" class="flex items-center justify-center text-[23px] font-bold h-[4rem] border-r border-b border-zinc-700 active:opacity-60 bg-[#18181b] text-white">8</button>
+                                <button onclick="handleSlopeKey('9')" class="flex items-center justify-center text-[23px] font-bold h-[4rem] border-r border-b border-zinc-700 active:opacity-60 bg-[#18181b] text-white">9</button>
+                                <button onclick="handleSlopeKey('C')" class="flex items-center justify-center text-[23px] font-bold h-[4rem] border-r border-b border-zinc-700 active:opacity-60 bg-[#3f3f46] text-white">C</button>
                                 
-                                <div className="grid grid-cols-4 bg-[#27272a] overflow-hidden">
-                                    {[7, 8, 9, 'C', 4, 5, 6, 'AC', 1, 2, 3, '⏎', 0, '00', '.'].map((key, i) => {
-                                        const isEnter = key === '⏎';
-                                        const isGray = key === 'C' || key === 'AC';
-                                        const bgClass = isEnter ? 'btn-3d-orange text-white' : isGray ? 'bg-[#3f3f46] text-white' : 'bg-[#18181b] text-white';
-                                        return (
-                                            <button key={i} onClick={(e) => { e.preventDefault(); handleSlopeKeypad(key); }} className={`flex items-center justify-center text-[22px] font-bold h-16 border-r border-b border-zinc-700 active:opacity-60 ${bgClass} ${isEnter ? 'row-span-2 h-auto' : ''}`}>
-                                                {isEnter ? <Icon name="enter" size={24} /> : key}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className={`ios-card-base py-2 px-3 flex flex-col items-start border-2 transition-all relative cursor-pointer ${slopeActiveField === 'a' ? 'border-orange-500 ring-2 ring-inset ring-orange-500' : 'border-green-500'}`} onClick={() => {setSlopeActiveField('a'); setSlopeIsNewEntry(true);}}>
-                                    <span className="text-[14px] font-bold text-zinc-300 uppercase leading-none mt-1">勾配幅</span>
-                                    <div className="flex items-center w-full mt-1 relative h-10">
-                                        <input type="text" readOnly value={formatNum(slopeA)} className={`w-full bg-transparent text-[26px] font-mono font-black outline-none ${slopeActiveField === 'a' ? 'text-white' : 'text-green-500'}`} placeholder="0" />
-                                        <span className="text-[14px] font-bold text-zinc-300 absolute right-0 bottom-1">㎜</span>
-                                    </div>
-                                </div>
-                                <div className={`ios-card-base py-2 px-3 flex flex-col items-start border-2 transition-all relative cursor-pointer ${slopeActiveField === 'b' ? 'border-orange-500 ring-2 ring-inset ring-orange-500' : 'border-blue-500'}`} onClick={() => {setSlopeActiveField('b'); setSlopeIsNewEntry(true);}}>
-                                    <span className="text-[14px] font-bold text-zinc-300 uppercase leading-none mt-1">斜辺</span>
-                                    <div className="flex items-center w-full mt-1 relative h-10">
-                                        <input type="text" readOnly value={formatNum(slopeB)} className={`w-full bg-transparent text-[26px] font-mono font-black outline-none ${slopeActiveField === 'b' ? 'text-white' : 'text-blue-500'}`} placeholder="0" />
-                                        <span className="text-[14px] font-bold text-zinc-300 absolute right-0 bottom-1">㎜</span>
-                                    </div>
-                                </div>
+                                <button onclick="handleSlopeKey('4')" class="flex items-center justify-center text-[23px] font-bold h-[4rem] border-r border-b border-zinc-700 active:opacity-60 bg-[#18181b] text-white">4</button>
+                                <button onclick="handleSlopeKey('5')" class="flex items-center justify-center text-[23px] font-bold h-[4rem] border-r border-b border-zinc-700 active:opacity-60 bg-[#18181b] text-white">5</button>
+                                <button onclick="handleSlopeKey('6')" class="flex items-center justify-center text-[23px] font-bold h-[4rem] border-r border-b border-zinc-700 active:opacity-60 bg-[#18181b] text-white">6</button>
+                                <button onclick="handleSlopeKey('AC')" class="flex items-center justify-center text-[21px] font-bold h-[4rem] border-r border-b border-zinc-700 active:opacity-60 bg-[#3f3f46] text-white">AC</button>
+                                
+                                <button onclick="handleSlopeKey('1')" class="flex items-center justify-center text-[23px] font-bold h-[4rem] border-r border-b border-zinc-700 active:opacity-60 bg-[#18181b] text-white">1</button>
+                                <button onclick="handleSlopeKey('2')" class="flex items-center justify-center text-[23px] font-bold h-[4rem] border-r border-b border-zinc-700 active:opacity-60 bg-[#18181b] text-white">2</button>
+                                <button onclick="handleSlopeKey('3')" class="flex items-center justify-center text-[23px] font-bold h-[4rem] border-r border-b border-zinc-700 active:opacity-60 bg-[#18181b] text-white">3</button>
+                                <button onclick="handleSlopeKey('⏎')" class="row-span-2 flex items-center justify-center text-[23px] font-bold border-r border-b border-zinc-700 active:opacity-60 btn-3d-silver-ios text-zinc-900 h-auto">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 10l-5 5 5 5M4 15h11a5 5 0 0 0 5-5V7"></path></svg>
+                                </button>
+                                
+                                <button onclick="handleSlopeKey('0')" class="flex items-center justify-center text-[23px] font-bold h-[4rem] border-r border-b border-zinc-700 active:opacity-60 bg-[#18181b] text-white">0</button>
+                                <button onclick="handleSlopeKey('00')" class="flex items-center justify-center text-[23px] font-bold h-[4rem] border-r border-b border-zinc-700 active:opacity-60 bg-[#18181b] text-white">00</button>
+                                <button onclick="handleSlopeKey('.')" class="flex items-center justify-center text-[23px] font-bold h-[4rem] border-r border-b border-zinc-700 active:opacity-60 bg-[#18181b] text-white">.</button>
                             </div>
                         </div>
+                    </div>
 
-                        <div className="flex-1 flex flex-col min-h-[300px]">
-                            <div className="ios-card-base p-6 border border-zinc-700 shadow-2xl flex-1 flex flex-col">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-2 font-bold text-zinc-200 text-[15px] uppercase tracking-widest">
-                                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
-                                        勾配プレビュー
-                                    </div>
-                                    <svg width="80" height="50" viewBox="0 0 80 50" className="text-zinc-300 overflow-visible">
-                                        <path d="M 10 35 L 60 35 L 60 10 Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                        <text x="35" y="48" fontSize="14" textAnchor="middle" fill="currentColor" fontWeight="bold">100</text>
-                                        <text x="65" y="25" fontSize="14" textAnchor="start" fill="currentColor" fontWeight="bold">{slopeY || 'y'}</text>
-                                    </svg>
+                    <!-- 右カラム: 計算結果カード & 大型断面プレビュー -->
+                    <div class="flex-1 w-full flex flex-col gap-4 mt-3 md:mt-0">
+                        <section class="grid grid-cols-2 gap-4 text-left">
+                            <div id="slope_field_a" onclick="setActiveSlopeField('a')" class="bg-zinc-900 p-4 rounded-2xl border-2 border-green-500 flex flex-col items-start shadow-xl text-left transition-all relative cursor-pointer hover:border-green-400">
+                                <span class="text-xs md:text-sm font-bold text-zinc-400 uppercase tracking-wider block leading-none">勾配幅 (高さ)</span>
+                                <div class="flex items-center w-full mt-2 relative h-[42px]">
+                                    <input type="text" id="slope_val_a" class="w-full bg-transparent font-mono font-black outline-none text-green-500" placeholder="0" inputmode="none" readonly>
+                                    <span class="text-base font-bold text-zinc-400 absolute right-0 bottom-1">㎜</span>
                                 </div>
-                                <div className="flex-1 flex justify-center items-center bg-black/40 rounded-2xl border border-zinc-800">
-                                    <svg viewBox="0 0 320 200" className="w-full h-full max-h-[320px] p-6 overflow-visible">
-                                        <path d="M 40 160 L 260 160" stroke="#f97316" strokeWidth="5" strokeLinecap="round" fill="none" />
-                                        <text x="150" y="190" fill="#fb923c" fontSize="20" textAnchor="middle" fontWeight="black">{formatNum(slopeC) || '-'}</text>
-                                        {isSlopeValid && (
-                                            <g>
-                                                <path d={`M 260 160 L 260 ${160 - Math.max(15, Math.min(120, (toNum(slopeY)||0)))}`} stroke="#22c55e" strokeWidth="5" strokeLinecap="round" fill="none" />
-                                                <text x="275" y={160 - (Math.max(15, Math.min(120, (toNum(slopeY)||0))) / 2)} fill="#4ade80" fontSize="20" dominantBaseline="middle" fontWeight="black">{(toNum(slopeY)||0) !== 0 ? formatNum(slopeA) : '-'}</text>
-                                                <path d={`M 40 160 L 260 ${160 - Math.max(15, Math.min(120, (toNum(slopeY)||0)))}`} stroke="#3b82f6" strokeWidth="5" strokeLinecap="round" fill="none" />
-                                                <text x="130" y={160 - (Math.max(15, Math.min(120, (toNum(slopeY)||0))) / 2) - 20} fill="#60a5fa" fontSize="20" textAnchor="middle" fontWeight="black" style={{ filter: 'drop-shadow(0px 0px 3px rgba(0,0,0,0.8))' }}>{(toNum(slopeY)||0) !== 0 ? formatNum(slopeB) : '-'}</text>
-                                            </g>
-                                        )}
-                                    </svg>
+                            </div>
+                            
+                            <div id="slope_field_b" onclick="setActiveSlopeField('b')" class="bg-zinc-900 p-4 rounded-2xl border-2 border-blue-500 flex flex-col items-start shadow-xl text-left transition-all relative cursor-pointer hover:border-blue-400">
+                                <span class="text-xs md:text-sm font-bold text-zinc-400 uppercase tracking-wider block leading-none">斜辺 (屋根流れ)</span>
+                                <div class="flex items-center w-full mt-2 relative h-[42px]">
+                                    <input type="text" id="slope_val_b" class="w-full bg-transparent font-mono font-black outline-none text-blue-500" placeholder="0" inputmode="none" readonly>
+                                    <span class="text-base font-bold text-zinc-400 absolute right-0 bottom-1">㎜</span>
                                 </div>
+                            </div>
+                        </section>
+
+                        <div class="bg-zinc-900 rounded-2xl p-5 border border-zinc-700 shadow-2xl overflow-hidden flex-1 flex flex-col justify-center min-h-[300px]">
+                            <span class="text-xs font-bold text-zinc-400 mb-2 block tracking-wider uppercase">リアルタイム勾配プレビュー</span>
+                            <div class="flex justify-center items-center h-64 md:h-80 bg-zinc-950/60 rounded-xl border border-zinc-800/80 p-2">
+                                <svg id="slope_svg" viewBox="0 0 320 200" class="w-full h-full max-h-full p-2 overflow-visible">
+                                    <path d="M 40 160 L 260 160" stroke="#f97316" stroke-width="4" stroke-linecap="round" fill="none" />
+                                    <text id="svg_val_c" x="150" y="185" fill="#fb923c" font-size="18" text-anchor="middle" font-weight="bold">-</text>
+                                    <g id="svg_calc_group" style="display:none;">
+                                        <path id="svg_path_a" d="M 260 160 L 260 100" stroke="#22c55e" stroke-width="4" stroke-linecap="round" fill="none" />
+                                        <text id="svg_val_a" x="272" y="130" fill="#4ade80" font-size="18" dominant-baseline="middle" font-weight="bold">-</text>
+                                        <path id="svg_path_b" d="M 40 160 L 260 100" stroke="#3b82f6" stroke-width="4" stroke-linecap="round" fill="none" />
+                                        <text id="svg_val_b" x="130" y="115" fill="#60a5fa" font-size="18" text-anchor="middle" font-weight="bold" style="filter: drop-shadow(0px 0px 3px rgba(0,0,0,0.9))">-</text>
+                                    </g>
+                                </svg>
                             </div>
                         </div>
                     </div>
                 </div>
-            );
-        };
+                <div style="height: calc(var(--safe-bottom) + 30px);"></div>
+            </div>
+        </div>
+    </div>
 
-        function App() {
-            const [toastMsg, setToastMsg] = useState('');
-            const showToast = useCallback((msg) => { setToastMsg(msg); setTimeout(() => setToastMsg(''), 1800); }, []);
-
-            const areaStateRef = useRef({
-                points: [], manualLengths: {}, fixedAngles: {}, isClosed: false, selectedIdx: -1, activeMode: 'edge', ppx: 60,
-                actionHistory: [], cameraX: 0, cameraY: 0, zoom: 1.0, isPanning: false, lastRawPos: {x: 0, y: 0}, startRawPos: {x: 0, y: 0}, hasMoved: false,
-                globalBaseAngle: 0, globalIsCW: true, initialPinchDist: null, initialZoom: 1, initialPinchCenter: null, initialCameraX: 0, initialCameraY: 0,
-                initialPinchWorld: null, isPinching: false, pinchRaf: 0, updateCount: 0,
-            });
-            const [areaSavedData, setAreaSavedData] = useState(() => getStored('area_calc_data_v21_ipad', []));
-
-            return (
-                <div className="flex flex-col bg-black min-h-screen">
-                    {toastMsg && <div className="toast-msg" style={{opacity: 1}}>{toastMsg}</div>}
-                    <header className="px-4 sm:px-6 py-3 flex items-center justify-between border-b border-zinc-800 bg-[#111] z-[100] shadow-md sticky top-0">
-                        <div className="flex items-center">
-                            <h1 className="text-[18px] sm:text-[20px] font-bold text-white whitespace-nowrap tracking-tight uppercase">面積計算</h1>
-                        </div>
-                        <div className="text-[14px] text-zinc-300 font-bold tracking-wider">KYOWA ROOF</div>
-                    </header>
-
-                    <main className="flex-1 p-4 sm:p-6 bg-black">
-                        <div className="max-w-7xl mx-auto w-full">
-                            <div className="animate-fade-in">
-                                <AreaApp areaStateRef={areaStateRef} savedData={areaSavedData} setAreaSavedData={setAreaSavedData} showToast={showToast} />
-                            </div>
-                        </div>
-                    </main>
+    <!-- 数値設定モーダル (iPad向け max-w-md) -->
+    <div id="inputModal" class="modal px-4">
+        <div class="bg-[#1C1C1E] rounded-[2rem] w-full max-w-md shadow-2xl border border-white/10 overflow-hidden animate-scale-in">
+            <div class="p-8 flex flex-col gap-5">
+                <h2 id="modalTitle" class="text-2xl font-black text-center text-white">設定</h2>
+                <div id="modalInputContainer" class="border-2 border-[#5E5CE6] rounded-2xl py-3 flex items-center justify-center relative bg-[#000] transition-colors shadow-inner">
+                    <input type="text" id="nativeInput" inputmode="decimal" pattern="[0-9.]*" enterkeyhint="done" placeholder="0.00" class="focus:placeholder-transparent" onclick="this.select()">
+                    <span class="absolute right-6 text-white/40 font-black text-2xl pointer-events-none" id="modalUnit">m</span>
                 </div>
-            );
+                <div id="quickAngle" class="hidden grid grid-cols-3 gap-3">
+                    <button type="button" id="setQuick90" class="py-3 bg-[#2C2C2E] hover:bg-[#3A3A3C] text-white rounded-xl font-black text-lg btn-tap">90°</button>
+                    <button type="button" id="setQuick270" class="py-3 bg-[#2C2C2E] hover:bg-[#3A3A3C] text-white rounded-xl font-black text-lg btn-tap">270°</button>
+                    <button type="button" id="setQuick45" class="py-3 bg-[#2C2C2E] hover:bg-[#3A3A3C] text-white rounded-xl font-black text-lg btn-tap">45°</button>
+                </div>
+                <div class="flex gap-3 mt-2">
+                    <button type="button" id="cancelModal" class="flex-1 h-[4rem] bg-[#3A3A3C] text-white rounded-2xl font-bold text-lg btn-tap">キャンセル</button>
+                    <button type="button" id="saveBtn" class="flex-[1.5] h-[4rem] bg-[#5E5CE6] text-white rounded-2xl font-black text-xl btn-tap shadow-lg transition-colors">適用する</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 削除確認モーダル -->
+    <div id="deleteModal" class="modal px-4">
+        <div class="bg-[#1C1C1E] rounded-[2rem] w-full max-w-md shadow-2xl border border-white/10 overflow-hidden">
+            <div class="p-8 flex flex-col gap-6">
+                <div class="flex flex-col gap-2">
+                    <h2 class="text-2xl font-black text-center text-white">データの削除</h2>
+                    <p class="text-center text-[#8E8E93] font-bold text-base leading-relaxed">この図面データをリストから完全に削除しても<br>よろしいですか？</p>
+                </div>
+                <div class="flex gap-4">
+                    <button type="button" id="cancelDelete" class="flex-1 h-[3.8rem] bg-[#2C2C2E] text-white rounded-2xl font-bold text-lg btn-tap">キャンセル</button>
+                    <button type="button" id="confirmDelete" class="flex-1 h-[3.8rem] bg-[#FF453A] text-white rounded-2xl font-black text-lg btn-tap shadow-lg">削除する</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 定型図形作成モーダル（直角・四角） -->
+    <div id="shapeModal" class="modal px-4">
+        <div class="bg-[#1C1C1E] rounded-[2rem] w-full max-w-md shadow-2xl border border-white/10 overflow-hidden">
+            <div class="p-8 flex flex-col gap-5">
+                <h2 id="shapeModalTitle" class="text-2xl font-black text-center text-white">図形の作成</h2>
+                
+                <div class="space-y-4">
+                    <div id="shapeGroup1" class="flex flex-col gap-1.5">
+                        <span id="shapeDim1Label" class="text-sm font-bold text-[#8E8E93] pl-1">横幅 (m)</span>
+                        <div class="border border-white/20 rounded-xl px-4 py-3 bg-black flex items-center focus-within:border-indigo-500 transition-colors">
+                            <input type="text" id="shapeDim1" inputmode="decimal" pattern="[0-9.]*" placeholder="5.00" class="w-full bg-transparent text-white font-mono font-bold text-2xl outline-none" onclick="this.select()">
+                            <span class="text-white/50 font-bold text-lg ml-2">m</span>
+                        </div>
+                    </div>
+                    <div id="shapeGroup2" class="flex flex-col gap-1.5">
+                        <span id="shapeDim2Label" class="text-sm font-bold text-[#8E8E93] pl-1">縦幅 / 高さ (m)</span>
+                        <div class="border border-white/20 rounded-xl px-4 py-3 bg-black flex items-center focus-within:border-indigo-500 transition-colors">
+                            <input type="text" id="shapeDim2" inputmode="decimal" pattern="[0-9.]*" placeholder="3.00" class="w-full bg-transparent text-white font-mono font-bold text-2xl outline-none" onclick="this.select()">
+                            <span class="text-white/50 font-bold text-lg ml-2">m</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-3">
+                    <button type="button" id="cancelShapeModal" class="flex-1 h-[3.8rem] bg-[#3A3A3C] text-white rounded-2xl font-bold text-lg btn-tap">キャンセル</button>
+                    <button type="button" id="generateShapeBtn" class="flex-[1.5] h-[3.8rem] bg-[#5E5CE6] text-white rounded-2xl font-black text-lg btn-tap shadow-lg">作成する</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'area_calc_data_v48';
+        const LONG_PRESS_DURATION = 450; 
+        const BASE_DOT_PITCH = 24.0; // iPadの大画面に合わせてピッチを最適化
+
+        let canvas, ctx, areaEl, inputModal, deleteModal, fitBtn, exportBtn, gridBg, pressProgress, nativeInput;
+        let shapeModal, shapeModalTitle, shapeDim1, shapeDim2, shapeDim1Label, shapeDim2Label, shapeGroup1, shapeGroup2;
+        let currentShapeModalMode = 'right_tri'; 
+
+        let points = [], manualLengths = {}, fixedAngles = {}, isClosed = false, selectedIdx = -1, activeMode = 'edge';
+        let ppx = BASE_DOT_PITCH; 
+
+        let cameraX = 0, cameraY = 0, zoom = 1.0, startRawPos = {x: 0, y: 0}, lastRawPos = {x: 0, y: 0}, hasMoved = false;
+        let globalBaseAngle = 0, globalIsCW = true, initialPinchDist = null, initialZoom = 1, initialPinchCenter = null;
+        let actionHistory = [], savedData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        let isPanning = false;
+        let pressTimer = null, longPressTriggered = false, targetVertexIdx = null, targetEdgeIdx = null;
+        let deleteTargetIdx = -1;
+
+        let activeSlopeField = 'y';
+        let slope_y = '', slope_x = '', slope_c = '', slope_a = '', slope_b = '';
+        let slopeIsNewEntry = true;
+
+        function persistData() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(savedData)); } catch(e) {} }
+        function showToast(msg) { 
+            const toast = document.getElementById('toast'); 
+            if (!toast) return; 
+            toast.innerText = msg; 
+            toast.style.opacity = '1'; 
+            setTimeout(() => { toast.style.opacity = '0'; }, 2200); 
+        }
+        
+        function syncViewportHeight(shouldResize = true) {
+            const viewportHeight = Math.round((window.visualViewport && window.visualViewport.height) ? window.visualViewport.height : window.innerHeight);
+            document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
+            window.scrollTo(0, 0);
+            if (shouldResize) {
+                requestAnimationFrame(() => requestAnimationFrame(() => resize()));
+            }
+        }
+        function scheduleViewportSync() {
+            syncViewportHeight();
+            setTimeout(() => syncViewportHeight(), 60);
+            setTimeout(() => syncViewportHeight(), 180);
+            setTimeout(() => syncViewportHeight(), 400);
+        }
+        function getRawCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            const t = (e.touches && e.touches.length > 0) ? e.touches[0] : (e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0] : e);
+            return {
+                x: t.clientX - rect.left,
+                y: t.clientY - rect.top
+            };
+        }
+        function w2s(w) { return { x: w.x * zoom + cameraX, y: w.y * zoom + cameraY }; }
+        function s2w(s) { return { x: (s.x - cameraX) / zoom, y: (s.y - cameraY) / zoom }; }
+        
+        function calculateTheoreticalArea() {
+            if (points.length < 3) return 0;
+            let logical = [{x: 0, y: 0}], curAngle = 0;
+            for (let i = 0; i < points.length - 1; i++) {
+                let len = manualLengths[i] !== undefined ? manualLengths[i] : (Math.hypot(points[i+1].x - points[i].x, points[i+1].y - points[i].y) / ppx);
+                logical.push({ x: logical[i].x + len * Math.cos(curAngle), y: logical[i].y + len * Math.sin(curAngle) });
+                if (i < points.length - 2) {
+                    let deg = fixedAngles[i+1];
+                    if (deg === undefined) {
+                        const a1 = Math.atan2(points[i+1].y - points[i].y, points[i+1].x - points[i].x);
+                        const a2 = Math.atan2(points[i+2].y - points[i+1].y, points[i+2].x - points[i+1].x);
+                        let turn = a2 - a1; 
+                        while(turn < -Math.PI) turn += Math.PI * 2; 
+                        while(turn > Math.PI) turn -= Math.PI * 2; 
+                        curAngle += turn;
+                    } else { 
+                        curAngle += (globalIsCW ? (180 - deg) * Math.PI / 180 : -(180 - deg) * Math.PI / 180); 
+                    }
+                }
+            }
+            let area = 0;
+            for (let i = 0; i < logical.length; i++) { 
+                const p1 = logical[i], p2 = logical[(i + 1) % logical.length]; 
+                area += p1.x * p2.y - p2.x * p1.y; 
+            }
+            return Math.abs(area / 2);
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then((registration) => registration.update().catch(() => {}))
-        .catch((error) => console.error('Service Worker registration failed:', error));
-    });
-  }
-</script>
+        function rebuildGeometry() {
+            if (points.length < 3 || !isClosed) return;
+            const startAnchor = { x: points[0].x, y: points[0].y };
+            let logical = [{x: 0, y: 0}], curAngle = 0;
+            for (let i = 0; i < points.length - 1; i++) {
+                let len = manualLengths[i] !== undefined ? manualLengths[i] : (Math.hypot(points[i+1].x - points[i].x, points[i+1].y - points[i].y) / ppx);
+                logical.push({ x: logical[i].x + len * Math.cos(curAngle), y: logical[i].y + len * Math.sin(curAngle) });
+                if (i < points.length - 2) {
+                    if (fixedAngles[i+1] !== undefined) { 
+                        curAngle += (globalIsCW ? (180 - fixedAngles[i+1]) * Math.PI / 180 : -(180 - fixedAngles[i+1]) * Math.PI / 180); 
+                    } else { 
+                        const a1 = Math.atan2(points[i+1].y - points[i].y, points[i+1].x - points[i].x);
+                        const a2 = Math.atan2(points[i+2].y - points[i+1].y, points[i+2].x - points[i+1].x); 
+                        let t = a2 - a1; 
+                        while(t < -Math.PI) t += Math.PI * 2; 
+                        while(t > Math.PI) t -= Math.PI * 2; 
+                        curAngle += t; 
+                    }
+                }
+            }
+            const rot = globalBaseAngle - Math.atan2(logical[1].y - logical[0].y, logical[1].x - logical[0].x);
+            for (let i = 0; i < logical.length; i++) { 
+                const p = logical[i]; 
+                points[i] = { 
+                    x: (p.x * Math.cos(rot) - p.y * Math.sin(rot)) * ppx + startAnchor.x, 
+                    y: (p.x * Math.sin(rot) + p.y * Math.cos(rot)) * ppx + startAnchor.y 
+                }; 
+            }
+            areaEl.innerText = calculateTheoreticalArea().toFixed(2);
+        }
 
+        function applyGeometryUpdate() {
+            if (!isClosed) return;
+            const N = points.length;
+            let firstManualIdx = -1;
+            for(let i = 0; i < N - 1; i++) { 
+                if(manualLengths[i] !== undefined) { 
+                    firstManualIdx = i; 
+                    break; 
+                } 
+            }
+            if(firstManualIdx !== -1) {
+                const d_screen = Math.hypot(points[(firstManualIdx+1)%N].x - points[firstManualIdx].x, points[(firstManualIdx+1)%N].y - points[firstManualIdx].y);
+                if (manualLengths[firstManualIdx] > 0) {
+                    ppx = d_screen / manualLengths[firstManualIdx];
+                }
+            }
+            rebuildGeometry();
+            draw();
+        }
+
+        function getCanvasCssSize() {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                width: rect.width || canvas.clientWidth || canvas.parentElement.clientWidth || window.innerWidth,
+                height: rect.height || canvas.clientHeight || canvas.parentElement.clientHeight || window.innerHeight
+            };
+        }
+
+        function fitView() {
+            if (points.length === 0) return;
+
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            points.forEach(p => {
+                minX = Math.min(minX, p.x);
+                maxX = Math.max(maxX, p.x);
+                minY = Math.min(minY, p.y);
+                maxY = Math.max(maxY, p.y);
+            });
+
+            const size = getCanvasCssSize();
+            // iPad対応: ゆとりを持ったパディング
+            const padX = 48;
+            const padTop = 50;
+            const padBottom = 50;
+
+            const availableW = Math.max(80, size.width - padX * 2);
+            const availableH = Math.max(80, size.height - padTop - padBottom);
+
+            const w = Math.max(1, maxX - minX);
+            const h = Math.max(1, maxY - minY);
+
+            zoom = Math.min(availableW / w, availableH / h);
+
+            const centerX = size.width / 2;
+            const centerY = size.height / 2;
+
+            cameraX = centerX - ((minX + maxX) / 2) * zoom;
+            cameraY = centerY - ((minY + maxY) / 2) * zoom;
+
+            draw();
+        }
+
+        function draw() {
+            if (!ctx) return;
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
+            
+            if (gridBg) { 
+                const s = BASE_DOT_PITCH * zoom; 
+                gridBg.style.backgroundSize = `${s}px ${s}px`; 
+                gridBg.style.backgroundPosition = `${cameraX}px ${cameraY}px`; 
+            }
+            if (points.length === 0) return;
+
+            if (isClosed) {
+                ctx.beginPath(); 
+                ctx.moveTo(w2s(points[0]).x, w2s(points[0]).y);
+                for (let i = 1; i < points.length; i++) ctx.lineTo(w2s(points[i]).x, w2s(points[i]).y);
+                ctx.closePath(); 
+                ctx.fillStyle = 'rgba(94, 92, 230, 0.12)'; 
+                ctx.fill();
+            }
+            
+            const limit = isClosed ? points.length : points.length - 1;
+            for (let i = 0; i < limit; i++) {
+                const p1 = w2s(points[i]), p2 = w2s(points[(i + 1) % points.length]);
+                const isAuto = isClosed && i === points.length - 1;
+                ctx.beginPath(); 
+                ctx.moveTo(p1.x, p1.y); 
+                ctx.lineTo(p2.x, p2.y); 
+                ctx.lineWidth = 6; 
+                ctx.lineCap = 'round';
+                if (isAuto) { 
+                    ctx.setLineDash([10, 8]); 
+                    ctx.strokeStyle = '#38bdf8'; 
+                } else { 
+                    ctx.setLineDash([]); 
+                    ctx.strokeStyle = manualLengths[i] !== undefined ? '#FFFFFF' : '#8E8E93'; 
+                }
+                ctx.stroke();
+            }
+            ctx.setLineDash([]);
+
+            // 頂点の描画 (タッチしやすいサイズ)
+            points.forEach((p_world, i) => { 
+                const p = w2s(p_world); 
+                ctx.beginPath(); 
+                ctx.arc(p.x, p.y, 10, 0, Math.PI * 2); 
+                ctx.fillStyle = (i === 0) ? '#FFFFFF' : '#1C1C1E'; 
+                ctx.fill(); 
+                ctx.strokeStyle = '#5E5CE6'; 
+                ctx.lineWidth = 3.5; 
+                ctx.stroke(); 
+            });
+
+            // 角度表示
+            if (isClosed && points.length >= 3) {
+                points.forEach((curr, i) => {
+                    const prev = points[(i - 1 + points.length) % points.length];
+                    const next = points[(i + 1) % points.length];
+                    const aIn = Math.atan2(curr.y - prev.y, curr.x - prev.x);
+                    const aOut = Math.atan2(next.y - curr.y, next.x - curr.x);
+                    let turn = aOut - aIn; 
+                    while(turn < -Math.PI) turn += Math.PI * 2; 
+                    while(turn > Math.PI) turn -= Math.PI * 2;
+                    let actualDeg = globalIsCW ? (180 - turn * 180 / Math.PI) : (180 + turn * 180 / Math.PI); 
+                    while(actualDeg <= 0) actualDeg += 360; 
+                    while(actualDeg > 360) actualDeg -= 360;
+                    
+                    const isClosingVertex = (i === 0 || i === points.length - 1);
+                    if (isClosingVertex && fixedAngles[i] !== undefined && Math.abs(fixedAngles[i] - actualDeg) > 0.5) {
+                        delete fixedAngles[i];
+                    }
+
+                    const isFixed = fixedAngles[i] !== undefined;
+                    const label = `${isFixed ? fixedAngles[i] : Math.round(actualDeg * 10) / 10}°`;
+                    
+                    ctx.font = 'bold 13px -apple-system, sans-serif'; 
+                    const tw = ctx.measureText(label).width;
+                    const pCurrS = w2s(curr), pPrevS = w2s(prev), pNextS = w2s(next);
+                    const a1 = Math.atan2(pPrevS.y - pCurrS.y, pPrevS.x - pCurrS.x);
+                    const a2 = Math.atan2(pNextS.y - pCurrS.y, pNextS.x - pCurrS.x);
+                    let diff = a2 - a1; 
+                    while(diff <= -Math.PI) diff += Math.PI * 2; 
+                    while(diff > Math.PI) diff -= Math.PI * 2;
+                    let bisectorAngle = a1 + diff / 2; 
+                    if (globalIsCW) { 
+                        if (diff > 0) bisectorAngle += Math.PI; 
+                    } else { 
+                        if (diff < 0) bisectorAngle += Math.PI; 
+                    }
+                    if (actualDeg > 180) bisectorAngle += Math.PI;
+                    
+                    const tx = pCurrS.x + Math.cos(bisectorAngle) * 44;
+                    const ty = pCurrS.y + Math.sin(bisectorAngle) * 44;
+                    ctx.fillStyle = 'rgba(28, 28, 30, 0.95)'; 
+                    ctx.beginPath(); 
+                    ctx.roundRect(tx - tw / 2 - 6, ty - 12, tw + 12, 24, 6); 
+                    ctx.fill();
+                    ctx.fillStyle = isFixed ? '#FF453A' : '#A1A1AA'; 
+                    ctx.textAlign = 'center'; 
+                    ctx.textBaseline = 'middle'; 
+                    ctx.fillText(label, tx, ty);
+                });
+            }
+
+            // 辺の寸法表示
+            for (let i = 0; i < limit; i++) {
+                const p1 = w2s(points[i]), p2 = w2s(points[(i + 1) % points.length]);
+                const isAuto = isClosed && i === points.length - 1;
+                const midX = (p1.x + p2.x) / 2, midY = (p1.y + p2.y) / 2;
+                const d = Math.hypot(points[(i + 1) % points.length].x - points[i].x, points[(i + 1) % points.length].y - points[i].y);
+                const val = isAuto ? (d / ppx) : (manualLengths[i] !== undefined ? manualLengths[i] : (d / ppx));
+                const label = `${val.toFixed(2)}m`;
+                
+                ctx.font = 'bold 15px ui-monospace, SFMono-Regular, monospace'; 
+                const tw = ctx.measureText(label).width;
+                ctx.fillStyle = isAuto ? '#0284c7' : (manualLengths[i] !== undefined ? '#FFFFFF' : 'rgba(142,142,147,0.95)');
+                ctx.beginPath(); 
+                ctx.roundRect(midX - tw / 2 - 10, midY - 15, tw + 20, 30, 7); 
+                ctx.fill();
+                ctx.fillStyle = (manualLengths[i] !== undefined && !isAuto) ? '#000000' : '#FFFFFF'; 
+                ctx.textAlign = 'center'; 
+                ctx.textBaseline = 'middle'; 
+                ctx.fillText(label, midX, midY);
+            }
+            if (fitBtn) {
+                if (isClosed) fitBtn.classList.remove('hidden'); 
+                else fitBtn.classList.add('hidden');
+            }
+        }
+
+        window.onload = function() {
+            canvas = document.getElementById('canvas'); 
+            ctx = canvas.getContext('2d'); 
+            areaEl = document.getElementById('areaDisplay'); 
+            inputModal = document.getElementById('inputModal'); 
+            deleteModal = document.getElementById('deleteModal'); 
+            fitBtn = document.getElementById('fitBtn'); 
+            exportBtn = document.getElementById('exportBtn'); 
+            gridBg = document.getElementById('gridBg'); 
+            pressProgress = document.getElementById('pressProgress'); 
+            nativeInput = document.getElementById('nativeInput');
+
+            // 定型図形モーダル要素
+            shapeModal = document.getElementById('shapeModal');
+            shapeModalTitle = document.getElementById('shapeModalTitle');
+            shapeDim1 = document.getElementById('shapeDim1');
+            shapeDim2 = document.getElementById('shapeDim2');
+            shapeDim1Label = document.getElementById('shapeDim1Label');
+            shapeDim2Label = document.getElementById('shapeDim2Label');
+            shapeGroup1 = document.getElementById('shapeGroup1');
+            shapeGroup2 = document.getElementById('shapeGroup2');
+
+            document.getElementById('createRightTriBtn').onclick = () => openShapeModal('right_tri');
+            document.getElementById('createRectBtn').onclick = () => openShapeModal('rect');
+            document.getElementById('cancelShapeModal').onclick = () => shapeModal.classList.remove('active');
+            document.getElementById('generateShapeBtn').onclick = generateShapeFromModal;
+
+            shapeDim1.onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    shapeDim2.focus();
+                }
+            };
+            shapeDim2.onkeydown = (e) => {
+                if (e.key === 'Enter') generateShapeFromModal();
+            };
+
+            setActiveSlopeField('y');
+            updateSlopeDisplay();
+
+            nativeInput.onkeydown = (e) => { 
+                if (e.key === 'Enter') { 
+                    document.getElementById('saveBtn').click(); 
+                    nativeInput.blur(); 
+                } 
+            };
+            
+            document.getElementById('saveBtn').onclick = (e) => { 
+                e.stopPropagation(); 
+                saveState(); 
+                const val = parseFloat(nativeInput.value); 
+                if (activeMode === 'edge') { 
+                    if (!isNaN(val) && val > 0) manualLengths[selectedIdx] = val; 
+                    else delete manualLengths[selectedIdx]; 
+                } else { 
+                    if (!isNaN(val) && val >= 0) fixedAngles[selectedIdx] = val; 
+                    else delete fixedAngles[selectedIdx]; 
+                } 
+                inputModal.classList.remove('active'); 
+                nativeInput.blur();
+                applyGeometryUpdate();
+                draw(); 
+            };
+
+            document.getElementById('cancelModal').onclick = (e) => { 
+                e.stopPropagation(); 
+                inputModal.classList.remove('active'); 
+                nativeInput.blur(); 
+                draw(); 
+            };
+            document.getElementById('cancelDelete').onclick = (e) => { 
+                e.stopPropagation(); 
+                deleteModal.classList.remove('active'); 
+            };
+            document.getElementById('confirmDelete').onclick = (e) => { 
+                e.stopPropagation(); 
+                executeDelete(); 
+            };
+
+            exportBtn.onclick = () => { 
+                if (points.length < 3 || !isClosed) { 
+                    showToast("図形を閉じてから保存してください"); 
+                    return; 
+                } 
+                const dataUrl = canvas.toDataURL("image/png"); 
+                savedData.push({ 
+                    img: dataUrl, 
+                    area: areaEl.innerText, 
+                    time: new Date().toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), 
+                    memo: '', 
+                    points: JSON.parse(JSON.stringify(points)), 
+                    manualLengths: {...manualLengths}, 
+                    fixedAngles: {...fixedAngles}, 
+                    isClosed, 
+                    ppx, 
+                    globalBaseAngle, 
+                    globalIsCW, 
+                    cameraX, 
+                    cameraY, 
+                    zoom 
+                }); 
+                persistData(); 
+                showToast("図面を保存しました"); 
+            };
+
+            document.getElementById('undoBtn').onclick = undo;
+            document.getElementById('fitBtn').onclick = fitView;
+            document.getElementById('resetBtn').onclick = () => { 
+                saveState(); 
+                points = []; 
+                manualLengths = {}; 
+                fixedAngles = {}; 
+                isClosed = false; 
+                cameraX = 0; 
+                cameraY = 0; 
+                zoom = 1; 
+                areaEl.innerText = "--.--"; 
+                draw(); 
+            };
+
+            document.getElementById('setQuick90').onclick = () => { nativeInput.value = "90"; document.getElementById('saveBtn').click(); };
+            document.getElementById('setQuick270').onclick = () => { nativeInput.value = "270"; document.getElementById('saveBtn').click(); };
+            document.getElementById('setQuick45').onclick = () => { nativeInput.value = "45"; document.getElementById('saveBtn').click(); };
+            
+            document.getElementById('executeBtn').onclick = () => {
+                if (!isClosed) { 
+                    showToast("図形を閉じてから実行してください"); 
+                    return; 
+                }
+                saveState();
+                const N = points.length;
+                for (let i = 1; i < N - 1; i++) {
+                    if (fixedAngles[i] === undefined) {
+                        const prev = points[(i - 1 + N) % N], curr = points[i], next = points[(i + 1) % N];
+                        const aIn = Math.atan2(curr.y - prev.y, curr.x - prev.x), aOut = Math.atan2(next.y - curr.y, next.x - curr.x);
+                        let turn = aOut - aIn; 
+                        while(turn < -Math.PI) turn += Math.PI * 2; 
+                        while(turn > Math.PI) turn -= Math.PI * 2;
+                        let actualDeg = globalIsCW ? (180 - turn * 180 / Math.PI) : (180 + turn * 180 / Math.PI); 
+                        while(actualDeg <= 0) actualDeg += 360; 
+                        while(actualDeg > 360) actualDeg -= 360;
+                        if (Math.abs(actualDeg - 90) <= 15) fixedAngles[i] = 90; 
+                        else if (Math.abs(actualDeg - 270) <= 15) fixedAngles[i] = 270; 
+                        else fixedAngles[i] = Math.round(actualDeg * 10) / 10;
+                    }
+                }
+                applyGeometryUpdate();
+                fitView();
+                setTimeout(fitView, 50);
+                setTimeout(fitView, 180);
+                showToast("図面を直角整列しました");
+            };
+
+            let isTouching = false;
+            canvas.addEventListener('mousedown', (e) => { if (isTouching) return; handleStart(e); });
+            window.addEventListener('mousemove', (e) => { if (isTouching) return; handleMove(e); });
+            window.addEventListener('mouseup', (e) => { if (isTouching) return; handleEnd(); });
+
+            canvas.addEventListener('touchstart', (e) => { 
+                if (window.visualViewport) { 
+                    document.documentElement.style.setProperty('--app-height', window.visualViewport.height + 'px'); 
+                } 
+                isTouching = true;
+                syncViewportHeight(false); 
+                if (e.touches.length === 2) { 
+                    isPanning = false; 
+                    targetVertexIdx = null; 
+                    targetEdgeIdx = null;
+                    initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); 
+                    initialZoom = zoom;
+                    const r = canvas.getBoundingClientRect(); 
+                    initialPinchCenter = { x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left, y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top }; 
+                    if (e.cancelable) e.preventDefault(); 
+                    return; 
+                }
+                handleStart(e); 
+            }, {passive:false});
+
+            window.addEventListener('touchmove', (e) => { 
+                if (isTouching && e.touches.length === 2 && initialPinchDist) {
+                    syncViewportHeight(false); 
+                    const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                    const nz = Math.max(0.1, Math.min(10, initialZoom * (d / initialPinchDist)));
+                    const r = nz / zoom;
+                    cameraX = initialPinchCenter.x - (initialPinchCenter.x - cameraX) * r; 
+                    cameraY = initialPinchCenter.y - (initialPinchCenter.y - cameraY) * r; 
+                    zoom = nz; 
+                    draw(); 
+                    if (e.cancelable) e.preventDefault(); 
+                    return; 
+                }
+                handleMove(e); 
+            }, {passive:false});
+
+            window.addEventListener('touchend', (e) => { 
+                handleEnd(); 
+                isTouching = false; 
+                syncViewportHeight(false); 
+            });
+
+            window.addEventListener('resize', scheduleViewportSync);
+            window.addEventListener('orientationchange', scheduleViewportSync);
+            window.addEventListener('pageshow', scheduleViewportSync);
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) scheduleViewportSync();
+            });
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', scheduleViewportSync);
+                window.visualViewport.addEventListener('scroll', scheduleViewportSync);
+            }
+            scheduleViewportSync();
+            resize();
+            setTimeout(scheduleViewportSync, 200);
+        };
+
+        function openShapeModal(mode) {
+            currentShapeModalMode = mode;
+            shapeGroup2.classList.remove('hidden');
+
+            if (mode === 'right_tri') {
+                shapeModalTitle.innerText = "直角三角形の作成";
+                shapeDim1Label.innerText = "底辺の幅 (m)";
+                shapeDim2Label.innerText = "高さ (m)";
+                shapeDim1.placeholder = "4.00";
+                shapeDim2.placeholder = "3.00";
+            } else if (mode === 'rect') {
+                shapeModalTitle.innerText = "四角形（長方形）の作成";
+                shapeDim1Label.innerText = "横幅 (m)";
+                shapeDim2Label.innerText = "縦幅 (m)";
+                shapeDim1.placeholder = "5.00";
+                shapeDim2.placeholder = "3.00";
+            }
+
+            shapeDim1.value = "";
+            shapeDim2.value = "";
+            shapeModal.classList.add('active');
+            setTimeout(() => shapeDim1.focus(), 120);
+        }
+
+        function generateShapeFromModal() {
+            const w = parseFloat(shapeDim1.value) || parseFloat(shapeDim1.placeholder);
+            const h = parseFloat(shapeDim2.value) || parseFloat(shapeDim2.placeholder);
+            if (!h || h <= 0) {
+                showToast("有効な高さを入力してください");
+                return;
+            }
+            if (!w || w <= 0) {
+                showToast("有効な数値を入力してください");
+                return;
+            }
+
+            saveState();
+            points = [];
+            manualLengths = {};
+            fixedAngles = {};
+            isClosed = true;
+            globalBaseAngle = 0;
+            globalIsCW = true;
+
+            const scale = BASE_DOT_PITCH * 2.5;
+            ppx = scale;
+
+            if (currentShapeModalMode === 'right_tri') {
+                points = [
+                    { x: 0, y: 0 },
+                    { x: w * scale, y: 0 },
+                    { x: w * scale, y: -h * scale }
+                ];
+                manualLengths[0] = w;
+                manualLengths[1] = h;
+                fixedAngles[1] = 90;
+            } else if (currentShapeModalMode === 'rect') {
+                points = [
+                    { x: 0, y: 0 },
+                    { x: w * scale, y: 0 },
+                    { x: w * scale, y: h * scale },
+                    { x: 0, y: h * scale }
+                ];
+                manualLengths[0] = w;
+                manualLengths[1] = h;
+                manualLengths[2] = w;
+                fixedAngles[1] = 90;
+                fixedAngles[2] = 90;
+                fixedAngles[3] = 90;
+            }
+
+            shapeModal.classList.remove('active');
+            areaEl.innerText = calculateTheoreticalArea().toFixed(2);
+
+            fitView();
+            setTimeout(fitView, 50);
+            setTimeout(fitView, 150);
+            
+            const shapeNames = {
+                'right_tri': '直角三角形',
+                'rect': '四角形'
+            };
+            showToast(`${shapeNames[currentShapeModalMode]}を作成しました`);
+        }
+
+        function switchTab(tab) { 
+            document.querySelectorAll('.tab-view').forEach(v => v.style.display = 'none'); 
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active')); 
+            if (tab === 'draw') { 
+                document.getElementById('drawView').style.display = 'flex'; 
+                document.getElementById('tabDraw').classList.add('active'); 
+                resize(); 
+            } else if (tab === 'history') { 
+                document.getElementById('historyView').style.display = 'block'; 
+                document.getElementById('tabHistory').classList.add('active'); 
+                renderHistory(); 
+            } else if (tab === 'slope') { 
+                document.getElementById('slopeView').style.display = 'block'; 
+                document.getElementById('tabSlope').classList.add('active'); 
+            }
+        }
+
+        function setActiveSlopeField(field) {
+            activeSlopeField = field;
+            ['y', 'x', 'c'].forEach(f => { 
+                const el = document.getElementById('slope_field_' + f); 
+                if (el) el.classList.remove('bg-zinc-800', 'ring-2', 'ring-inset', 'ring-orange-500', 'z-10'); 
+            });
+            ['a', 'b'].forEach(f => {
+                const el = document.getElementById('slope_field_' + f);
+                if (el) { 
+                    el.classList.remove('border-orange-500', 'ring-2', 'ring-inset', 'ring-orange-500', 'z-10'); 
+                    el.classList.add(f === 'a' ? 'border-green-500' : 'border-blue-500'); 
+                }
+                const input = document.getElementById('slope_val_' + f); 
+                if (input) { 
+                    input.classList.remove('text-white'); 
+                    input.classList.add(f === 'a' ? 'text-green-500' : 'text-blue-500'); 
+                }
+            });
+            if (['y', 'x', 'c'].includes(field)) { 
+                const el = document.getElementById('slope_field_' + field); 
+                if (el) el.classList.add('bg-zinc-800', 'ring-2', 'ring-inset', 'ring-orange-500', 'z-10'); 
+            } else if (['a', 'b'].includes(field)) {
+                const el = document.getElementById('slope_field_' + field);
+                if (el) { 
+                    el.classList.remove(field === 'a' ? 'border-green-500' : 'border-blue-500'); 
+                    el.classList.add('border-orange-500', 'ring-2', 'ring-inset', 'ring-orange-500', 'z-10'); 
+                }
+                const input = document.getElementById('slope_val_' + field); 
+                if (input) { 
+                    input.classList.remove(field === 'a' ? 'text-green-500' : 'text-blue-500'); 
+                    input.classList.add('text-white'); 
+                }
+            }
+            slopeIsNewEntry = true;
+        }
+
+        function formatVal(val) { 
+            if (val === '' || val === undefined) return ''; 
+            let n = parseFloat(val.toString().replace(/,/g, '')); 
+            return isNaN(n) ? val : Math.round(n).toLocaleString(); 
+        }
+
+        function updateSlopeDisplay() {
+            document.getElementById('slope_val_y').value = slope_y; 
+            document.getElementById('slope_val_x').value = slope_x;
+            document.getElementById('slope_val_c').value = formatVal(slope_c); 
+            document.getElementById('slope_val_a').value = formatVal(slope_a); 
+            document.getElementById('slope_val_b').value = formatVal(slope_b);
+            
+            const y_num = parseFloat(slope_y) || 0; 
+            document.getElementById('svg_val_c').textContent = slope_c ? formatVal(slope_c) : '-';
+            const group = document.getElementById('svg_calc_group');
+            const isValid = (slope_y !== '' || slope_x !== '') && (slope_c !== '' || slope_a !== '' || slope_b !== '');
+            if (isValid) {
+                group.style.display = 'block'; 
+                const h = Math.max(10, Math.min(100, y_num));
+                document.getElementById('svg_path_a').setAttribute('d', `M 260 160 L 260 ${160 - h}`); 
+                document.getElementById('svg_val_a').textContent = slope_a !== '' ? formatVal(slope_a) : '-'; 
+                document.getElementById('svg_val_a').setAttribute('y', 160 - h / 2);
+                document.getElementById('svg_path_b').setAttribute('d', `M 40 160 L 260 ${160 - h}`); 
+                document.getElementById('svg_val_b').textContent = slope_b !== '' ? formatVal(slope_b) : '-'; 
+                document.getElementById('svg_val_b').setAttribute('y', 160 - h / 2 - 15);
+            } else { 
+                group.style.display = 'none'; 
+            }
+        }
+
+        function handleSlopeKey(key) {
+            if (key === 'AC') { 
+                slope_y = ''; slope_x = ''; slope_c = ''; slope_a = ''; slope_b = ''; 
+                slopeIsNewEntry = true; 
+                updateSlopeDisplay(); 
+                return; 
+            }
+            if (key === 'C') { 
+                if (activeSlopeField === 'y') slope_y = ''; 
+                else if (activeSlopeField === 'x') slope_x = ''; 
+                else if (activeSlopeField === 'c') slope_c = ''; 
+                else if (activeSlopeField === 'a') slope_a = ''; 
+                else if (activeSlopeField === 'b') slope_b = ''; 
+                slopeIsNewEntry = true; 
+                updateSlopeDisplay(); 
+                return; 
+            }
+            if (key === '⏎') { 
+                const fields = ['y', 'x', 'c', 'a', 'b']; 
+                const currentIdx = fields.indexOf(activeSlopeField); 
+                if (currentIdx !== -1 && currentIdx < fields.length - 1) setActiveSlopeField(fields[currentIdx + 1]); 
+                else setActiveSlopeField('y'); 
+                return; 
+            }
+            let currentStr = ""; 
+            if (activeSlopeField === 'y') currentStr = slope_y; 
+            else if (activeSlopeField === 'x') currentStr = slope_x; 
+            else if (activeSlopeField === 'c') currentStr = slope_c; 
+            else if (activeSlopeField === 'a') currentStr = slope_a; 
+            else if (activeSlopeField === 'b') currentStr = slope_b;
+            
+            if (key === '00' && (slopeIsNewEntry || currentStr === '')) return; 
+            if (key === '.' && !slopeIsNewEntry && currentStr.includes('.')) return;
+            
+            let nextStr = slopeIsNewEntry ? (key === '.' ? '0.' : key.toString()) : currentStr + key; 
+            slopeIsNewEntry = false; 
+            processSlopeChange(activeSlopeField, nextStr); 
+            updateSlopeDisplay();
+        }
+
+        function processSlopeChange(field, val) {
+            const cleanVal = val.toString().replace(/,/g, '');
+            if (field === 'y') { 
+                slope_y = cleanVal; 
+                const n = parseFloat(cleanVal); 
+                if (isNaN(n) || cleanVal === '') { 
+                    slope_x = ''; 
+                } else { 
+                    slope_x = (Math.round((Math.atan(n / 100) * 180) / Math.PI * 10) / 10).toFixed(1); 
+                } 
+                calculateDependencies('y', n); 
+            } else if (field === 'x') { 
+                slope_x = cleanVal; 
+                const n = parseFloat(cleanVal); 
+                if (isNaN(n) || cleanVal === '') { 
+                    slope_y = ''; 
+                } else { 
+                    const nY = 100 * Math.tan(n * Math.PI / 180); 
+                    slope_y = Math.round(nY).toString(); 
+                    calculateDependencies('y', nY); 
+                } 
+            } else if (field === 'c') { 
+                slope_c = cleanVal; 
+                calculateDependencies('c', parseFloat(cleanVal)); 
+            } else if (field === 'a') { 
+                slope_a = cleanVal; 
+                calculateDependencies('a', parseFloat(cleanVal)); 
+            } else if (field === 'b') { 
+                slope_b = cleanVal; 
+                calculateDependencies('b', parseFloat(cleanVal)); 
+            }
+        }
+
+        function calculateDependencies(changedField, changedValue) {
+            const curY = (changedField === 'y') ? changedValue : parseFloat(slope_y) || 0; 
+            const curC = (changedField === 'c') ? changedValue : parseFloat(String(slope_c).replace(/,/g, '')) || 0; 
+            const curA = (changedField === 'a') ? changedValue : parseFloat(String(slope_a).replace(/,/g, '')) || 0; 
+            const curB = (changedField === 'b') ? changedValue : parseFloat(String(slope_b).replace(/,/g, '')) || 0;
+            const hasLockedC = (changedField === 'c' || (slope_c !== '' && changedField !== 'c'));
+            
+            if (hasLockedC) {
+                if ((changedField === 'y' || changedField === 'c') && !isNaN(curY)) { 
+                    const nextA = curC * (curY / 100); 
+                    const nextB = Math.sqrt(curC**2 + nextA**2); 
+                    slope_a = Math.round(nextA).toString(); 
+                    slope_b = Math.round(nextB).toString(); 
+                } else if (changedField === 'a') { 
+                    if (curC !== 0 && !isNaN(curA)) { 
+                        const calcY = (curA / curC) * 100; 
+                        slope_y = Math.round(calcY).toString(); 
+                        slope_x = (Math.round((Math.atan(calcY / 100) * 180) / Math.PI * 10) / 10).toFixed(1); 
+                        slope_b = Math.round(Math.sqrt(curC**2 + curA**2)).toString(); 
+                    } else { 
+                        slope_b = ''; 
+                    } 
+                } else if (changedField === 'b') { 
+                    if (!isNaN(curB) && curB >= curC) { 
+                        const calcA = Math.sqrt(Math.max(0, curB**2 - curC**2)); 
+                        slope_a = Math.round(calcA).toString(); 
+                        const calcY = (curC === 0) ? 0 : (calcA / curC) * 100; 
+                        slope_y = Math.round(calcY).toString(); 
+                        slope_x = (Math.round((Math.atan(calcY / 100) * 180) / Math.PI * 10) / 10).toFixed(1); 
+                    } else { 
+                        slope_a = ''; slope_y = ''; slope_x = ''; 
+                    } 
+                }
+            } else {
+                if (slope_y !== '' || changedField === 'y') {
+                    if (changedField === 'a') { 
+                        if (curY !== 0) { 
+                            const calcC = curA / (curY / 100); 
+                            slope_c = Math.round(calcC).toString(); 
+                            slope_b = Math.round(Math.sqrt(calcC**2 + curA**2)).toString(); 
+                        } 
+                    } else if (changedField === 'b') { 
+                        const calcC = curB / Math.sqrt(1 + (curY / 100)**2); 
+                        slope_c = Math.round(calcC).toString(); 
+                        slope_a = Math.round(calcC * (curY / 100)).toString(); 
+                    }
+                } else if (changedField === 'a' && slope_b !== '') { 
+                    if (curB > curA) { 
+                        const calcC = Math.sqrt(curB**2 - curA**2); 
+                        slope_c = Math.round(calcC).toString(); 
+                        const calcY = (curA / calcC) * 100; 
+                        slope_y = Math.round(calcY).toString(); 
+                        slope_x = (Math.round((Math.atan(calcY / 100) * 180) / Math.PI * 10) / 10).toFixed(1); 
+                    } 
+                } else if (changedField === 'b' && slope_a !== '') { 
+                    if (curB > curA) { 
+                        const calcC = Math.sqrt(curB**2 - curA**2); 
+                        slope_c = Math.round(calcC).toString(); 
+                        const calcY = (curA / calcC) * 100; 
+                        slope_y = Math.round(calcY).toString(); 
+                        slope_x = (Math.round((Math.atan(calcY / 100) * 180) / Math.PI * 10) / 10).toFixed(1); 
+                    } 
+                }
+            }
+        }
+
+        function undo() { 
+            if (actionHistory.length === 0) return; 
+            const state = actionHistory.pop(); 
+            points = state.points; 
+            manualLengths = state.manualLengths; 
+            fixedAngles = state.fixedAngles; 
+            isClosed = state.isClosed; 
+            ppx = state.ppx; 
+            globalBaseAngle = state.globalBaseAngle; 
+            globalIsCW = state.globalIsCW; 
+            areaEl.innerText = isClosed && points.length >= 3 ? calculateTheoreticalArea().toFixed(2) : "--.--";
+            draw(); 
+        }
+
+        function saveState() { 
+            const state = { 
+                points: JSON.parse(JSON.stringify(points)), 
+                manualLengths: {...manualLengths}, 
+                fixedAngles: {...fixedAngles}, 
+                isClosed, 
+                ppx, 
+                globalBaseAngle, 
+                globalIsCW 
+            }; 
+            actionHistory.push(state); 
+            if (actionHistory.length > 50) actionHistory.shift(); 
+        }
+
+        function resize() {
+            if (!canvas) return;
+            const rect = canvas.parentElement.getBoundingClientRect();
+            const dpr = Math.max(1, window.devicePixelRatio || 1);
+            canvas.style.width = `${rect.width}px`;
+            canvas.style.height = `${rect.height}px`;
+            canvas.width = Math.round(rect.width * dpr);
+            canvas.height = Math.round(rect.height * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            draw();
+        }
+
+        function loadHistory(idx) { 
+            const data = savedData[idx]; 
+            if (!data || !data.points) { 
+                showToast("復元用データがありません"); 
+                return; 
+            } 
+            saveState(); 
+            points = JSON.parse(JSON.stringify(data.points)); 
+            manualLengths = {...data.manualLengths}; 
+            fixedAngles = {...data.fixedAngles}; 
+            isClosed = data.isClosed; 
+            ppx = data.ppx; 
+            globalBaseAngle = data.globalBaseAngle; 
+            globalIsCW = data.globalIsCW; 
+            cameraX = data.cameraX || 0; 
+            cameraY = data.cameraY || 0; 
+            zoom = data.zoom || 1.0; 
+            areaEl.innerText = data.area || (isClosed && points.length >= 3 ? calculateTheoreticalArea().toFixed(2) : "--.--");
+            switchTab('draw'); 
+            draw(); 
+            showToast("データを読み込みました"); 
+        }
+
+        function renderHistory() { 
+            const list = document.getElementById('historyList'); 
+            if (savedData.length === 0) { 
+                list.innerHTML = `<div class="col-span-full text-center text-[#8E8E93] py-24 font-bold text-lg">まだ保存されたデータはありません</div>`; 
+                return; 
+            } 
+            list.innerHTML = savedData.slice().reverse().map((data, idx) => { 
+                const actualIdx = savedData.length - 1 - idx; 
+                return `
+                <div class="history-card flex flex-col justify-between hover:border-zinc-500 transition-colors">
+                    <div>
+                        <input type="text" class="memo-input focus:text-white" placeholder="メモを入力..." value="${data.memo || ''}" onchange="updateMemo(${actualIdx}, this.value)">
+                        <div class="flex justify-between items-center mb-3 px-1">
+                            <span class="text-[#8E8E93] text-xs font-bold">${data.time}</span>
+                            <span class="text-white font-black text-xl">${data.area} m²</span>
+                        </div>
+                        <div onclick="loadHistory(${actualIdx})" class="active:opacity-75 transition-opacity cursor-pointer">
+                            <img src="${data.img}" class="w-full h-48 object-contain rounded-xl border border-white/10 mb-3 bg-[#0a0a0c]">
+                            <div class="text-center text-xs text-[#5E5CE6] font-bold mb-3 uppercase tracking-wider">タップで編集を再開</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 pt-2 border-t border-white/5">
+                        <button onclick="deleteHistory(${actualIdx})" class="flex-1 py-3 bg-[#2C2C2E] hover:bg-red-950/40 text-[#FF453A] rounded-xl font-bold text-sm btn-tap transition-colors">削除</button>
+                    </div>
+                </div>`; 
+            }).join(''); 
+        }
+
+        function updateMemo(idx, val) { 
+            savedData[idx].memo = val; 
+            persistData(); 
+            showToast("メモを保存しました"); 
+        }
+
+        function deleteHistory(idx) { 
+            deleteTargetIdx = idx; 
+            deleteModal.classList.add('active'); 
+        }
+
+        function executeDelete() { 
+            if (deleteTargetIdx !== -1) { 
+                savedData.splice(deleteTargetIdx, 1); 
+                persistData(); 
+                renderHistory(); 
+                deleteModal.classList.remove('active'); 
+                deleteTargetIdx = -1; 
+                showToast("削除しました"); 
+            } 
+        }
+
+        function handleStart(e) {
+            const raw = getRawCoords(e); 
+            startRawPos = {x: raw.x, y: raw.y}; 
+            lastRawPos = raw; 
+            hasMoved = false; 
+            longPressTriggered = false; 
+            isPanning = false;
+
+            if (e.target.id === 'canvas' && e.cancelable) e.preventDefault();
+
+            if (!isClosed) { 
+                saveState(); 
+                const world = s2w(raw); 
+                const snapped = {x: Math.round(world.x), y: Math.round(world.y)}; 
+                if (points.length >= 3 && Math.hypot(raw.x - w2s(points[0]).x, raw.y - w2s(points[0]).y) < 55) { 
+                    finalizeDrawing(); 
+                } else { 
+                    points.push(snapped); 
+                    draw(); 
+                } 
+                return; 
+            }
+
+            for (let i = 0; i < points.length; i++) { 
+                const p1 = w2s(points[i]), p2 = w2s(points[(i + 1) % points.length]); 
+                const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2; 
+                if (Math.hypot(raw.x - mx, raw.y - my) < 40) { 
+                    targetEdgeIdx = i; 
+                    return; 
+                } 
+            }
+
+            const vIdx = points.findIndex(p => Math.hypot(raw.x - w2s(p).x, raw.y - w2s(p).y) < 35);
+            if (vIdx !== -1) {
+                targetVertexIdx = vIdx; 
+                pressProgress.style.opacity = '1'; 
+                let start = Date.now();
+                pressTimer = setInterval(() => { 
+                    let p = Math.min(100, ((Date.now() - start) / LONG_PRESS_DURATION) * 100); 
+                    pressProgress.style.width = p + '%'; 
+                    if (Date.now() - start >= LONG_PRESS_DURATION) { 
+                        clearInterval(pressTimer); 
+                        pressTimer = null; 
+                        longPressTriggered = true; 
+                    } 
+                }, 20);
+                return;
+            }
+
+            for (let i = 0; i < points.length; i++) { 
+                const l2 = Math.pow(w2s(points[i]).x - w2s(points[(i + 1) % points.length]).x, 2) + Math.pow(w2s(points[i]).y - w2s(points[(i + 1) % points.length]).y, 2); 
+                if (l2 === 0) continue;
+                let t = Math.max(0, Math.min(1, ((raw.x - w2s(points[i]).x) * (w2s(points[(i + 1) % points.length]).x - w2s(points[i]).x) + (raw.y - w2s(points[i]).y) * (w2s(points[(i + 1) % points.length]).y - w2s(points[i]).y)) / l2));
+                const dist = Math.hypot(raw.x - (w2s(points[i]).x + t * (w2s(points[(i + 1) % points.length]).x - w2s(points[i]).x)), raw.y - (w2s(points[i]).y + t * (w2s(points[(i + 1) % points.length]).y - w2s(points[i]).y))); 
+                if (dist < 28) { 
+                    targetEdgeIdx = i; 
+                    return; 
+                } 
+            }
+            isPanning = true;
+        }
+
+        function handleMove(e) { 
+            const raw = getRawCoords(e); 
+            if (Math.hypot(raw.x - startRawPos.x, raw.y - startRawPos.y) > 10) { 
+                hasMoved = true; 
+                if (pressTimer) { 
+                    clearInterval(pressTimer); 
+                    pressTimer = null; 
+                    pressProgress.style.opacity = '0'; 
+                } 
+            } 
+            if (isPanning) { 
+                cameraX += raw.x - lastRawPos.x; 
+                cameraY += raw.y - lastRawPos.y; 
+                lastRawPos = raw; 
+                draw(); 
+            } 
+        }
+
+        function handleEnd() {
+            if (pressTimer) { 
+                clearInterval(pressTimer); 
+                pressTimer = null; 
+            }
+            pressProgress.style.opacity = '0'; 
+            setTimeout(() => { 
+                if (!pressTimer) pressProgress.style.width = '0'; 
+            }, 200);
+
+            if (isClosed && !hasMoved) { 
+                if (longPressTriggered && targetVertexIdx !== null) { 
+                    activeMode = 'angle'; 
+                    selectedIdx = targetVertexIdx; 
+                    openModal(); 
+                } else if (targetEdgeIdx !== null) { 
+                    if (targetEdgeIdx === points.length - 1) {
+                        showToast("この斜辺は他の寸法から自動計算されます");
+                    } else {
+                        activeMode = 'edge'; 
+                        selectedIdx = targetEdgeIdx; 
+                        openModal(); 
+                    }
+                } 
+            }
+            targetVertexIdx = null; 
+            targetEdgeIdx = null; 
+            isPanning = false; 
+            draw();
+        }
+
+        function finalizeDrawing() { 
+            saveState(); 
+            isClosed = true; 
+            globalBaseAngle = Math.atan2(points[1].y - points[0].y, points[1].x - points[0].x); 
+            let s = 0; 
+            for(let i = 0; i < points.length; i++) {
+                s += points[i].x * points[(i + 1) % points.length].y - points[(i + 1) % points.length].x * points[i].y; 
+            }
+            globalIsCW = s > 0; 
+            draw(); 
+        }
+        
+        function openModal() {
+            const modalInputContainer = document.getElementById('modalInputContainer');
+            const saveBtn = document.getElementById('saveBtn');
+            const modalUnit = document.getElementById('modalUnit');
+            
+            document.getElementById('quickAngle').classList.toggle('hidden', activeMode === 'edge'); 
+            document.getElementById('modalTitle').innerText = activeMode === 'edge' ? "寸法の入力" : "角度の入力";
+            modalUnit.innerText = activeMode === 'edge' ? "m" : "°";
+
+            if (activeMode === 'angle') {
+                modalInputContainer.style.borderColor = '#34C759'; 
+                saveBtn.style.backgroundColor = '#34C759';
+            } else {
+                modalInputContainer.style.borderColor = '#5E5CE6'; 
+                saveBtn.style.backgroundColor = '#5E5CE6';
+            }
+
+            const getA = (idx) => {
+                const prev = points[(idx - 1 + points.length) % points.length], curr = points[idx], next = points[(idx + 1) % points.length];
+                const aIn = Math.atan2(curr.y - prev.y, curr.x - prev.x), aOut = Math.atan2(next.y - curr.y, next.x - curr.x);
+                let turn = aOut - aIn; 
+                while(turn < -Math.PI) turn += Math.PI * 2; 
+                while(turn > Math.PI) turn -= Math.PI * 2;
+                let actualDeg = globalIsCW ? (180 - turn * 180 / Math.PI) : (180 + turn * 180 / Math.PI); 
+                while(actualDeg <= 0) actualDeg += 360; 
+                while(actualDeg > 360) actualDeg -= 360; 
+                return Math.round(actualDeg * 10) / 10;
+            };
+
+            let val = activeMode === 'edge' ? manualLengths[selectedIdx] : fixedAngles[selectedIdx];
+            if (!val && activeMode === 'edge') {
+                val = (Math.hypot(points[(selectedIdx + 1) % points.length].x - points[selectedIdx].x, points[(selectedIdx + 1) % points.length].y - points[selectedIdx].y) / ppx).toFixed(2);
+            } else if (!val && isClosed && activeMode === 'angle') {
+                val = getA(selectedIdx);
+            }
+            
+            nativeInput.value = val || ''; 
+            inputModal.classList.add('active'); 
+            nativeInput.focus();
+            if (nativeInput.setSelectionRange) { 
+                nativeInput.setSelectionRange(0, nativeInput.value.length); 
+            }
+        }
+    </script>
+
+    <script>
+        (function () {
+            if (!('serviceWorker' in navigator)) return;
+            if (window.location.protocol !== 'http:' && window.location.protocol !== 'https:') return;
+
+            let hasRefreshedForPwaUpdate = false;
+
+            const requestSkipWaiting = (registration) => {
+                if (registration && registration.waiting) {
+                    registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                }
+            };
+
+            window.addEventListener('load', async () => {
+                try {
+                    const registration = await navigator.serviceWorker.register('./sw.js', {
+                        scope: './',
+                        updateViaCache: 'none'
+                    });
+
+                    if (registration.waiting) {
+                        if (typeof showToast === 'function') showToast('更新を適用しています…');
+                        requestSkipWaiting(registration);
+                    }
+
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        if (!newWorker) return;
+
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                if (typeof showToast === 'function') showToast('新しい版を反映します');
+                                requestSkipWaiting(registration);
+                            }
+                        });
+                    });
+
+                    if (registration.update) {
+                        registration.update().catch(() => {});
+                    }
+                } catch (error) {
+                    console.error('Service Worker registration failed:', error);
+                }
+            });
+
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (hasRefreshedForPwaUpdate) return;
+                hasRefreshedForPwaUpdate = true;
+                window.location.reload();
+            });
+        })();
+    </script>
 </body>
 </html>
