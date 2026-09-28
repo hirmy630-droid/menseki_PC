@@ -1,4 +1,4 @@
-const CACHE_NAME = 'area-calc-pc-ipad-pwa-v20260405-02';
+const CACHE_NAME = 'area-calc-pwa-v20260928-01';
 const APP_SHELL = [
   './',
   './index.html',
